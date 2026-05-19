@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>epautomate — DOE-2.2 SIM → Excel</title>
+<style>
+  :root {
+    --red:        #E4002B;
+    --red-dark:   #B5001F;
+    --red-light:  #FFF0F2;
+    --black:      #1a1a1a;
+    --gray:       #6b6b6b;
+    --gray-light: #f4f4f4;
+    --border:     #e5e5e5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #fff;
+    color: var(--black);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px; border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900; font-size: 26px; letter-spacing: -1px;
+    color: var(--red);
+  }
+  .topbar .meta {
+    font-size: 12px; color: var(--gray); text-align: right;
+  }
+  .topbar .meta strong { color: var(--black); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 40px 40px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 32px; font-weight: 800; margin-bottom: 8px;
+    color: var(--black); letter-spacing: -.5px;
+  }
+  .hero h1 span { color: var(--red); }
+  .hero p { color: var(--gray); font-size: 15px; max-width: 720px; }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1100px; margin: 0 auto; padding: 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+  }
+  @media (max-width: 880px) { .container { grid-template-columns: 1fr; } }
+
+  /* ── Cards ── */
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 22px;
+    background: #fff;
+  }
+  .card.full { grid-column: 1 / -1; }
+  .card h2 {
+    font-size: 16px; font-weight: 800; margin-bottom: 14px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--red);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card h2 .badge {
+    background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: 3px; letter-spacing: .5px;
+  }
+  .card h2 .badge.bl  { background: var(--black); }
+
+  /* ── Drop zones ── */
+  .drop {
+    border: 2px dashed #d0d0d0; border-radius: 6px;
+    padding: 24px 16px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    margin-bottom: 12px;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--red); background: var(--red-light);
+  }
+  .drop .ic {
+    font-size: 28px; color: var(--red); display: block; margin-bottom: 6px;
+  }
+  .drop .txt { font-weight: 600; }
+  .drop .sub { font-size: 11px; color: var(--gray); margin-top: 4px; }
+  .drop input { display: none; }
+
+  /* ── File list ── */
+  .files { list-style: none; margin-top: 8px; }
+  .files li {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px; background: var(--gray-light);
+    border-radius: 4px; margin-bottom: 4px; font-size: 12px;
+  }
+  .files li .name { font-weight: 600; }
+  .files li .size { color: var(--gray); font-size: 11px; }
+  .files li .x {
+    cursor: pointer; color: var(--gray); font-weight: 700;
+    padding: 0 4px; border-radius: 3px;
+  }
+  .files li .x:hover { color: var(--red); background: #fff; }
+  .files li.inp { border-left: 3px solid var(--red); }
+  .files li.sim { border-left: 3px solid var(--black); }
+
+  /* ── Inputs ── */
+  label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+  input[type=text], select {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 13px; font-family: inherit;
+  }
+  input[type=text]:focus, select:focus {
+    outline: none; border-color: var(--red);
+  }
+  .field { margin-bottom: 14px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Action bar ── */
+  .actions {
+    display: flex; gap: 12px; align-items: center;
+    padding-top: 16px; border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  .btn {
+    padding: 11px 22px; border: none; border-radius: 4px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: inherit; letter-spacing: .3px;
+    transition: background .15s, transform .05s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--red); color: #fff; }
+  .btn-primary:hover { background: var(--red-dark); }
+  .btn-primary:disabled {
+    background: #ccc; cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: #fff; color: var(--black);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--red); color: var(--red); }
+  .actions .status { margin-left: auto; font-size: 12px; color: var(--gray); }
+
+  /* ── Command preview ── */
+  .command-box {
+    background: var(--black); color: #fff;
+    padding: 16px 18px; border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px; line-height: 1.7;
+    overflow-x: auto; white-space: pre;
+    margin-top: 14px;
+  }
+  .command-box .flag { color: #ff6b8a; }
+  .command-box .val { color: #ffd47e; }
+  .command-box .comment { color: #888; }
+
+  .copy-btn {
+    position: relative; float: right;
+    background: rgba(255,255,255,.1); color: #fff;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 3px;
+    padding: 3px 9px; font-size: 11px; cursor: pointer;
+    margin-top: -2px;
+  }
+  .copy-btn:hover { background: var(--red); border-color: var(--red); }
+
+  /* ── Step indicator ── */
+  .steps {
+    display: flex; gap: 4px; padding: 16px 40px;
+    background: var(--gray-light); border-bottom: 1px solid var(--border);
+  }
+  .step {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; font-size: 12px; font-weight: 600;
+    color: var(--gray);
+  }
+  .step .num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; border: 2px solid #d0d0d0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--gray);
+  }
+  .step.done { color: var(--black); }
+  .step.done .num { background: var(--red); border-color: var(--red); color: #fff; }
+  .step.active .num { border-color: var(--red); color: var(--red); }
+  .step-sep { align-self: center; color: #d0d0d0; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center; padding: 30px 40px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--gray);
+  }
+  .footer a { color: var(--red); text-decoration: none; font-weight: 600; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--black); color: #fff;
+    padding: 12px 20px; border-radius: 4px;
+    font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    opacity: 0; transform: translateY(20px);
+    transition: all .25s; pointer-events: none;
+    border-left: 4px solid var(--red);
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ═════════ Top bar ═════════ -->
+<header class="topbar">
+  <div class="logo">CANNONDESIGN</div>
+  <div class="meta">
+    <strong>epautomate</strong> · DOE-2.2 SIM → Excel<br>
+    Energy Modeling Workflow Automation
+  </div>
+</header>
+
+<!-- ═════════ Hero ═════════ -->
+<section class="hero">
+  <h1>SIM → <span>Excel</span> Extractor</h1>
+  <p>Drop your eQUEST <code>.SIM</code> output files (and matching <code>.inp</code> sources) below.
+     The tool will parse ~120 metrics from each run and generate a formatted Excel workbook
+     with <strong>BL Data</strong> and <strong>Proposed Data</strong> tabs.</p>
+</section>
+
+<!-- ═════════ Step indicator ═════════ -->
+<div class="steps">
+  <div class="step done"  id="step1"><span class="num">1</span> Select Files</div>
+  <span class="step-sep">›</span>
+  <div class="step"       id="step2"><span class="num">2</span> Configure</div>
+  <span class="step-sep">›</span>
+  <div class="step"       id="step3"><span class="num">3</span> Generate Command</div>
+  <span class="step-sep">›</span>
+  <div class="step"       id="step4"><span class="num">4</span> Run &amp; Download</div>
+</div>
+
+<!-- ═════════ Main grid ═════════ -->
+<main class="container">
+
+  <!-- ─── Baseline files ─── -->
+  <div class="card">
+    <h2>Baseline Runs <span class="badge bl">BL Data</span></h2>
+
+    <div class="drop" data-target="bl-sim">
+      <span class="ic">📄</span>
+      <div class="txt">Drop .SIM files here</div>
+      <div class="sub">or click to browse (multiple allowed)</div>
+      <input type="file" id="bl-sim" multiple accept=".SIM,.sim">
+    </div>
+    <ul class="files" id="bl-sim-list"></ul>
+
+    <div class="drop" data-target="bl-inp">
+      <span class="ic">⚙️</span>
+      <div class="txt">Drop matching .inp files (optional)</div>
+      <div class="sub">utility rates, shading, glass codes</div>
+      <input type="file" id="bl-inp" multiple accept=".inp">
+    </div>
+    <ul class="files" id="bl-inp-list"></ul>
+  </div>
+
+  <!-- ─── Proposed files ─── -->
+  <div class="card">
+    <h2>Proposed Runs <span class="badge">Proposed Data</span></h2>
+
+    <div class="drop" data-target="prop-sim">
+      <span class="ic">📄</span>
+      <div class="txt">Drop .SIM files here</div>
+      <div class="sub">or click to browse (multiple allowed)</div>
+      <input type="file" id="prop-sim" multiple accept=".SIM,.sim">
+    </div>
+    <ul class="files" id="prop-sim-list"></ul>
+
+    <div class="drop" data-target="prop-inp">
+      <span class="ic">⚙️</span>
+      <div class="txt">Drop matching .inp files (optional)</div>
+      <div class="sub">utility rates, shading, glass codes</div>
+      <input type="file" id="prop-inp" multiple accept=".inp">
+    </div>
+    <ul class="files" id="prop-inp-list"></ul>
+  </div>
+
+  <!-- ─── Configuration ─── -->
+  <div class="card full">
+    <h2>Configuration</h2>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Option label prefix</label>
+        <input type="text" id="opt-label" placeholder='e.g. "LEED Baseline"' value="">
+      </div>
+      <div class="field">
+        <label>Climate zone</label>
+        <select id="climate-zone">
+          <option value="">— Select —</option>
+          <option>1A</option><option>2A</option><option>2B</option>
+          <option>3A</option><option>3B</option><option>3C</option>
+          <option selected>4A</option><option>4B</option><option>4C</option>
+          <option>5A</option><option>5B</option><option>5C</option>
+          <option>6A</option><option>6B</option>
+          <option>7</option><option>8</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Output Excel filename</label>
+        <input type="text" id="output-name" value="MSU_results.xlsx">
+      </div>
+      <div class="field">
+        <label>Auto-discover .inp in same folder</label>
+        <select id="auto-inp">
+          <option value="yes" selected>Yes (recommended)</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Generated command ─── -->
+  <div class="card full">
+    <h2>Generated CLI Command</h2>
+    <p style="color:var(--gray); font-size:12px; margin-bottom:6px;">
+      Copy this command and run it in your terminal from the
+      <code>epautomate</code> repo root after activating your Python venv.
+    </p>
+    <div class="command-box" id="cmd-box"><button class="copy-btn" onclick="copyCmd()">⎘ Copy</button><span class="comment"># Drop files above to generate command</span></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="run-btn" onclick="onRun()" disabled>▶ Generate Command</button>
+      <button class="btn btn-secondary" onclick="resetAll()">Reset</button>
+      <span class="status" id="status">Awaiting files…</span>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <strong>epautomate</strong> · DOE-2.2 results aggregation ·
+  Mumbai Sustainability · <a href="how-it-works.html">How it works →</a>
+</footer>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+const state = {
+  'bl-sim':   [],
+  'bl-inp':   [],
+  'prop-sim': [],
+  'prop-inp': [],
+};
+
+// ── Setup drop zones ──
+document.querySelectorAll('.drop').forEach(d => {
+  const target = d.dataset.target;
+  const input = document.getElementById(target);
+  d.addEventListener('click', () => input.click());
+  d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); });
+  d.addEventListener('dragleave', () => d.classList.remove('over'));
+  d.addEventListener('drop', e => {
+    e.preventDefault();
+    d.classList.remove('over');
+    addFiles(target, [...e.dataTransfer.files]);
+  });
+  input.addEventListener('change', e => addFiles(target, [...e.target.files]));
+});
+
+function addFiles(target, files) {
+  for (const f of files) {
+    if (!state[target].some(x => x.name === f.name && x.size === f.size)) {
+      state[target].push(f);
+    }
+  }
+  renderList(target);
+  updateCommand();
+}
+
+function removeFile(target, idx) {
+  state[target].splice(idx, 1);
+  renderList(target);
+  updateCommand();
+}
+
+function fmtSize(b) {
+  if (b > 1e6) return (b/1e6).toFixed(1) + ' MB';
+  if (b > 1e3) return (b/1e3).toFixed(1) + ' KB';
+  return b + ' B';
+}
+
+function renderList(target) {
+  const ul = document.getElementById(target + '-list');
+  ul.innerHTML = '';
+  const cls = target.endsWith('inp') ? 'inp' : 'sim';
+  state[target].forEach((f, i) => {
+    const li = document.createElement('li');
+    li.className = cls;
+    li.innerHTML = `
+      <div>
+        <div class="name">${f.name}</div>
+        <div class="size">${fmtSize(f.size)}</div>
+      </div>
+      <span class="x" onclick="removeFile('${target}', ${i})">✕</span>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+// ── Command builder ──
+function updateCommand() {
+  const box = document.getElementById('cmd-box');
+  const btn = document.getElementById('run-btn');
+  const status = document.getElementById('status');
+
+  const sims = state['bl-sim'].length + state['prop-sim'].length;
+  if (sims === 0) {
+    box.innerHTML = `<button class="copy-btn" onclick="copyCmd()">⎘ Copy</button><span class="comment"># Drop .SIM files above to generate command</span>`;
+    btn.disabled = true;
+    status.textContent = 'Awaiting files…';
+    setStep(1);
+    return;
+  }
+
+  const opt = document.getElementById('opt-label').value.trim() || 'Run';
+  const cz  = document.getElementById('climate-zone').value;
+  const out = document.getElementById('output-name').value.trim() || 'results.xlsx';
+  const autoInp = document.getElementById('auto-inp').value === 'yes';
+
+  const fmt = arr => arr.map(f => `"${f.name}"`).join(' ');
+
+  let cmd = '<span class="val">python</span> sim_extractor/run.py';
+
+  if (state['bl-sim'].length) cmd += ` \\\n  <span class="flag">--bl</span> ${fmt(state['bl-sim'])}`;
+  if (state['bl-inp'].length) cmd += ` \\\n  <span class="flag">--bl-inp</span> ${fmt(state['bl-inp'])}`;
+  if (state['prop-sim'].length) cmd += ` \\\n  <span class="flag">--proposed</span> ${fmt(state['prop-sim'])}`;
+  if (state['prop-inp'].length) cmd += ` \\\n  <span class="flag">--proposed-inp</span> ${fmt(state['prop-inp'])}`;
+
+  cmd += ` \\\n  <span class="flag">--option</span> <span class="val">"${opt}"</span>`;
+  if (cz) cmd += ` \\\n  <span class="flag">--climate-zone</span> <span class="val">${cz}</span>`;
+  if (!autoInp) cmd += ` \\\n  <span class="flag">--no-auto-inp</span>`;
+  cmd += ` \\\n  <span class="flag">--output</span> <span class="val">${out}</span>`;
+
+  box.innerHTML = `<button class="copy-btn" onclick="copyCmd()">⎘ Copy</button>${cmd}`;
+  btn.disabled = false;
+
+  const blCount   = state['bl-sim'].length;
+  const propCount = state['prop-sim'].length;
+  status.textContent = `${blCount} baseline + ${propCount} proposed run${sims===1?'':'s'} ready`;
+
+  setStep(opt && cz ? 3 : 2);
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    el.classList.toggle('done', i < n);
+    el.classList.toggle('active', i === n);
+  }
+}
+
+function copyCmd() {
+  const txt = document.getElementById('cmd-box').innerText.replace(/^⎘ Copy\s*/, '');
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast('Command copied to clipboard');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function onRun() {
+  copyCmd();
+  setStep(4);
+  showToast('Paste into terminal to run');
+}
+
+function resetAll() {
+  for (const k in state) {
+    state[k] = [];
+    renderList(k);
+  }
+  document.getElementById('opt-label').value = '';
+  document.getElementById('output-name').value = 'MSU_results.xlsx';
+  updateCommand();
+  setStep(1);
+}
+
+document.getElementById('opt-label').addEventListener('input', updateCommand);
+document.getElementById('climate-zone').addEventListener('change', updateCommand);
+document.getElementById('output-name').addEventListener('input', updateCommand);
+document.getElementById('auto-inp').addEventListener('change', updateCommand);
+</script>
+</body>
+</html>
