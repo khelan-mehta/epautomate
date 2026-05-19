@@ -163,6 +163,23 @@ COLUMNS = [
     ("East Shading Type",                     "east_shading_type",         "@",              C_LIME),
     ("East Shading Ratio (%)",                "east_shading_ratio",        "0.0",            C_LIME),
 
+    # --- From .inp (BDL input) ---
+    ("INP: Project Title",                    "inp_title",                 "@",              C_GRAY),
+    ("INP: Run Period",                       "inp_run_period",            "@",              C_GRAY),
+    ("INP: Site Altitude (ft)",               "inp_altitude_ft",           "#,##0",          C_GRAY),
+    ("INP: Building Azimuth (°)",             "inp_building_azimuth",      "0.0",            C_GRAY),
+    ("INP: Master Elec Meter",                "inp_master_elec_meter",     "@",              C_GRAY),
+    ("INP: Master Fuel Meter",                "inp_master_fuel_meter",     "@",              C_GRAY),
+    ("INP: Elec Rate ($/kWh)",                "inp_elec_rate_per_kwh",     "0.0000",         C_GRAY),
+    ("INP: Gas Rate ($/therm)",               "inp_gas_rate_per_therm",    "0.0000",         C_GRAY),
+    ("INP: Elec Monthly Chg ($)",             "inp_elec_monthly_chg",      "0.00",           C_GRAY),
+    ("INP: Gas Monthly Chg ($)",              "inp_gas_monthly_chg",       "0.00",           C_GRAY),
+    ("INP: Glass Type Codes",                 "inp_glass_type_code_list",  "@",              C_GRAY),
+    ("INP: N Overhang Depth (ft)",            "inp_n_max_overhang_ft",     "0.00",           C_GRAY),
+    ("INP: E Overhang Depth (ft)",            "inp_e_max_overhang_ft",     "0.00",           C_GRAY),
+    ("INP: S Overhang Depth (ft)",            "inp_s_max_overhang_ft",     "0.00",           C_GRAY),
+    ("INP: W Overhang Depth (ft)",            "inp_w_max_overhang_ft",     "0.00",           C_GRAY),
+
     # --- Envelope thermal ---
     ("Vertical Weighted U-Value (Btu/h·ft²·F)",  "vert_weighted_u",       "0.000",          C_RED),
     ("Vertical Weighted R-Value (ft²·h·F/Btu)",  "vert_weighted_r",       "0.00",           C_RED),
@@ -266,8 +283,11 @@ def _write_sheet(ws, rows, rates):
         total_kbtu = data.get("total_energy_kbtu", 0.0)
         total_area = data.get("total_floor_area", 1.0) or 1.0
 
-        elec_rate = rates.get("electricity_per_kbtu", 0.0)
-        gas_rate = rates.get("gas_per_kbtu", 0.0)
+        # Prefer rates parsed from .inp; fall back to config rates
+        elec_rate = (data.get("inp_elec_rate_per_kbtu")
+                     or rates.get("electricity_per_kbtu", 0.0)) or 0.0
+        gas_rate  = (data.get("inp_gas_rate_per_kbtu")
+                     or rates.get("gas_per_kbtu", 0.0)) or 0.0
         elec_carbon = rates.get("elec_carbon_kg_per_kbtu", 0.0)
         gas_carbon = rates.get("gas_carbon_kg_per_kbtu", 0.0)
 
@@ -347,14 +367,14 @@ def _write_sheet(ws, rows, rates):
             "wall_to_floor_ratio": 0.0,
             "roof_to_floor_ratio": 0.0,
             "envelope_to_floor_ratio": 0.0,
-            "north_shading_type": "",
-            "north_shading_ratio": 0.0,
-            "west_shading_type": "",
-            "west_shading_ratio": 0.0,
-            "south_shading_type": "",
-            "south_shading_ratio": 0.0,
-            "east_shading_type": "",
-            "east_shading_ratio": 0.0,
+            "north_shading_type":  data.get("inp_n_shading_type", ""),
+            "north_shading_ratio": data.get("inp_n_shading_ratio", 0.0),
+            "west_shading_type":   data.get("inp_w_shading_type", ""),
+            "west_shading_ratio":  data.get("inp_w_shading_ratio", 0.0),
+            "south_shading_type":  data.get("inp_s_shading_type", ""),
+            "south_shading_ratio": data.get("inp_s_shading_ratio", 0.0),
+            "east_shading_type":   data.get("inp_e_shading_type", ""),
+            "east_shading_ratio":  data.get("inp_e_shading_ratio", 0.0),
             "wall2_u_value": 0.0,
             "roof_u_value": 0.0,
             "exposed_floor_u_value": 0.0,
