@@ -1,1449 +1,1549 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>epAutomate &mdash; SIM &rarr; Excel</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<style>
-  :root {
-    --red: #E4002B;
-    --red-dark: #b30022;
-    --black: #000;
-    --white: #fff;
-    --gray-50: #fafafa;
-    --gray-100: #f3f3f3;
-    --gray-200: #e5e5e5;
-    --gray-300: #d4d4d4;
-    --gray-500: #737373;
-    --gray-700: #404040;
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--white);
-    color: var(--black);
-    font-size: 14px;
-    line-height: 1.4;
-  }
-  header {
-    border-bottom: 4px solid var(--red);
-    padding: 18px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .brand {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-  }
-  .brand-mark {
-    font-weight: 900;
-    font-size: 24px;
-    letter-spacing: -0.5px;
-  }
-  .brand-mark .red { color: var(--red); }
-  .brand-sub {
-    color: var(--gray-500);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  main {
-    max-width: 1100px;
-    margin: 24px auto;
-    padding: 0 24px 64px;
-  }
-  h1 {
-    font-size: 22px;
-    margin: 16px 0 4px;
-    font-weight: 800;
-  }
-  h2 {
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--gray-700);
-    margin: 28px 0 12px;
-    padding-bottom: 6px;
-    border-bottom: 2px solid var(--black);
-  }
-  .lead { color: var(--gray-500); margin: 0 0 8px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
-  @media (max-width: 900px) { .grid-2, .grid-4 { grid-template-columns: 1fr; } }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>epAutomate &mdash; SIM &rarr; Excel</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');
 
-  .dropzone {
-    border: 2px dashed var(--gray-300);
-    border-radius: 6px;
-    padding: 18px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s, background .15s;
-    background: var(--gray-50);
-  }
-  .dropzone.sim { border-color: var(--black); }
-  .dropzone.inp { border-color: var(--red); }
-  .dropzone:hover { background: var(--gray-100); }
-  .dropzone.drag { background: #fff5f7; border-style: solid; }
-  .dropzone .label {
-    font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-    font-size: 11px; margin-bottom: 6px;
-  }
-  .dropzone .hint { font-size: 12px; color: var(--gray-500); }
-  .dropzone input[type=file] { display: none; }
+        :root {
+            --red: #E4002B;
+            --red-dark: #b30022;
+            --red-muted: rgba(228, 0, 43, 0.08);
+            --black: #0a0a0a;
+            --white: #fff;
+            --gray-50: #f9f9f9;
+            --gray-100: #f1f1f1;
+            --gray-200: #e4e4e4;
+            --gray-300: #c8c8c8;
+            --gray-400: #a0a0a0;
+            --gray-500: #6e6e6e;
+            --gray-700: #3a3a3a;
+            --border: 1px solid var(--gray-200);
+            --radius: 6px;
+            --shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 4px 16px rgba(0, 0, 0, .06);
+        }
 
-  .chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin-top: 8px; min-height: 0;
-  }
-  .chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid var(--black);
-    background: var(--white);
-    padding: 4px 8px;
-    border-radius: 14px;
-    font-size: 12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-  .chip.inp { border-color: var(--red); }
-  .chip .x {
-    cursor: pointer; color: var(--gray-500); font-weight: 700;
-    padding: 0 2px;
-  }
-  .chip .x:hover { color: var(--red); }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-  label.field {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--gray-700);
-    margin-bottom: 4px;
-    font-weight: 700;
-  }
-  input[type=text], select {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--gray-300);
-    border-radius: 4px;
-    font-size: 14px;
-    background: var(--white);
-    font-family: inherit;
-  }
-  input[type=text]:focus, select:focus {
-    outline: none;
-    border-color: var(--red);
-    box-shadow: 0 0 0 2px rgba(228, 0, 43, .15);
-  }
-  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+        html,
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f5f5;
+            color: var(--black);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
 
-  button.primary {
-    background: var(--red);
-    color: var(--white);
-    border: none;
-    padding: 12px 28px;
-    font-size: 14px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  button.primary:hover:not(:disabled) { background: var(--red-dark); }
-  button.primary:disabled {
-    background: var(--gray-300);
-    color: var(--gray-500);
-    cursor: not-allowed;
-  }
-  button.ghost {
-    background: var(--white); color: var(--black);
-    border: 1px solid var(--gray-300);
-    padding: 8px 14px; font-size: 13px;
-    border-radius: 4px; cursor: pointer;
-  }
-  button.ghost:hover { border-color: var(--black); }
+        /* ─── HEADER ─── */
+        header {
+            background: var(--black);
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
 
-  .actions { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
 
-  pre.log {
-    background: var(--black);
-    color: #d4d4d4;
-    padding: 16px;
-    border-radius: 4px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    max-height: 320px;
-    overflow: auto;
-    margin: 16px 0 0;
-    white-space: pre-wrap;
-  }
-  pre.log .ok  { color: #6dd76d; }
-  pre.log .err { color: #ff6464; }
-  pre.log .warn{ color: #ffd866; }
-  pre.log .dim { color: #888; }
+        .brand-logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--white);
+            letter-spacing: -0.5px;
+        }
 
-  .toast {
-    position: fixed; bottom: 20px; right: 20px;
-    background: var(--black); color: var(--white);
-    padding: 10px 16px; border-radius: 4px;
-    font-size: 13px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.2);
-    opacity: 0; transform: translateY(10px);
-    transition: opacity .2s, transform .2s;
-    pointer-events: none;
-    z-index: 100;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
+        .brand-logo .red {
+            color: var(--red);
+        }
 
-  footer {
-    border-top: 1px solid var(--gray-200);
-    padding: 16px 32px;
-    font-size: 11px;
-    color: var(--gray-500);
-    text-align: center;
-  }
-  footer .red { color: var(--red); }
-</style>
+        .brand-pipe {
+            width: 1px;
+            height: 20px;
+            background: rgba(255, 255, 255, .15);
+        }
+
+        .brand-tag {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: rgba(255, 255, 255, .45);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, .35);
+            letter-spacing: 0.5px;
+        }
+
+        .header-right .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .4
+            }
+        }
+
+        /* ─── LAYOUT ─── */
+        main {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 32px 24px 80px;
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            margin-bottom: 28px;
+        }
+
+        .hero h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--black);
+            line-height: 1.15;
+            margin-bottom: 8px;
+        }
+
+        .hero h1 span {
+            color: var(--red);
+        }
+
+        .hero p {
+            color: var(--gray-500);
+            font-size: 13.5px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .hero p code {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            background: var(--gray-100);
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: var(--gray-700);
+        }
+
+        /* ─── SECTION ─── */
+        .section {
+            background: var(--white);
+            border: var(--border);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            border-bottom: var(--border);
+            background: var(--gray-50);
+        }
+
+        .section-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--red);
+            color: var(--white);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--gray-700);
+        }
+
+        .section-body {
+            padding: 20px;
+        }
+
+        /* ─── DROPZONES ─── */
+        .drop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media(max-width:680px) {
+            .drop-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .drop-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .drop-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .drop-label .badge {
+            font-size: 9px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .badge-bl {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-prop {
+            background: #fce7f3;
+            color: #be185d;
+        }
+
+        .badge-opt {
+            background: var(--gray-100);
+            color: var(--gray-400);
+        }
+
+        .dropzone {
+            border: 2px dashed var(--gray-200);
+            border-radius: var(--radius);
+            padding: 18px 14px;
+            cursor: pointer;
+            transition: border-color .15s, background .15s, transform .1s;
+            background: var(--gray-50);
+            text-align: center;
+            position: relative;
+        }
+
+        .dropzone:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+            transform: translateY(-1px);
+        }
+
+        .dropzone.drag {
+            background: var(--red-muted);
+            border-color: var(--red);
+            border-style: solid;
+        }
+
+        .dropzone.has-files {
+            border-style: solid;
+            border-color: var(--gray-300);
+        }
+
+        .dropzone input[type=file] {
+            display: none;
+        }
+
+        .dropzone-icon {
+            font-size: 22px;
+            margin-bottom: 6px;
+            opacity: .5;
+        }
+
+        .dropzone-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-500);
+            margin-bottom: 2px;
+        }
+
+        .dropzone-hint {
+            font-size: 11px;
+            color: var(--gray-400);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* ─── CHIPS ─── */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 0;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 4px;
+            padding: 3px 8px 3px 6px;
+            font-size: 11px;
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            border: 1px solid;
+            line-height: 1.4;
+        }
+
+        .chip-bl {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .chip-prop {
+            background: #fdf2f8;
+            border-color: #fbcfe8;
+            color: #9d174d;
+        }
+
+        .chip .x {
+            cursor: pointer;
+            opacity: .5;
+            font-size: 13px;
+            line-height: 1;
+            padding: 0 1px;
+        }
+
+        .chip .x:hover {
+            opacity: 1;
+            color: var(--red);
+        }
+
+        /* ─── CONFIG GRID ─── */
+        .config-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr 1fr;
+            gap: 14px;
+        }
+
+        @media(max-width:780px) {
+            .config-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media(max-width:480px) {
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .field-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-500);
+            margin-bottom: 5px;
+        }
+
+        input[type=text],
+        select {
+            width: 100%;
+            padding: 8px 11px;
+            border: var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            background: var(--white);
+            color: var(--black);
+            font-family: 'Inter', sans-serif;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        input[type=text]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(228, 0, 43, .1);
+        }
+
+        .checkbox-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 4px;
+            margin-top: 2px;
+        }
+
+        .checkbox-wrap input[type=checkbox] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--red);
+            cursor: pointer;
+        }
+
+        .checkbox-wrap label {
+            font-size: 12.5px;
+            color: var(--gray-700);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ─── ACTIONS ─── */
+        .actions-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 20px;
+            border-top: var(--border);
+            background: var(--gray-50);
+            border-radius: 0 0 10px 10px;
+        }
+
+        .btn-primary {
+            background: var(--red);
+            color: var(--white);
+            border: none;
+            padding: 10px 24px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Syne', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background .15s, transform .1s, box-shadow .15s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--red-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(228, 0, 43, .3);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            background: var(--gray-200);
+            color: var(--gray-400);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-ghost {
+            background: var(--white);
+            color: var(--gray-700);
+            border: var(--border);
+            padding: 10px 16px;
+            font-size: 12.5px;
+            font-weight: 500;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--gray-400);
+            color: var(--black);
+        }
+
+        .status-txt {
+            font-size: 12px;
+            color: var(--gray-400);
+            font-family: 'DM Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--gray-200);
+            border-top-color: var(--red);
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            display: none;
+        }
+
+        .spinner.visible {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ─── LOG ─── */
+        pre.log {
+            background: #0e0e0e;
+            color: #c8c8c8;
+            padding: 16px;
+            border-radius: var(--radius);
+            font-family: 'DM Mono', monospace;
+            font-size: 11.5px;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            line-height: 1.7;
+            border: 1px solid #1a1a1a;
+        }
+
+        pre.log .ok {
+            color: #4ade80;
+        }
+
+        pre.log .err {
+            color: #f87171;
+        }
+
+        pre.log .warn {
+            color: #fbbf24;
+        }
+
+        pre.log .dim {
+            color: #555;
+        }
+
+        pre.log .info {
+            color: #60a5fa;
+        }
+
+        /* ─── TOAST ─── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--black);
+            color: var(--white);
+            padding: 10px 18px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity .2s, transform .2s;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ─── FOOTER ─── */
+        footer {
+            text-align: center;
+            padding: 24px;
+            font-size: 11.5px;
+            color: var(--gray-400);
+            font-family: 'DM Mono', monospace;
+        }
+
+        footer span {
+            color: var(--red);
+        }
+    </style>
 </head>
+
 <body>
 
-<header>
-  <div class="brand">
-    <div class="brand-mark"><span>Cannon</span><span class="red">Design</span></div>
-    <div class="brand-sub">epAutomate &middot; SIM extractor</div>
-  </div>
-  <div class="brand-sub">Runs entirely in your browser</div>
-</header>
+    <header>
+        <div class="brand">
+            <div class="brand-logo">Cannon<span class="red">Design</span></div>
+            <div class="brand-pipe"></div>
+            <div class="brand-tag">epAutomate · SIM Extractor</div>
+        </div>
+        <div class="header-right">
+            <div class="dot"></div>
+            runs locally · no upload
+        </div>
+    </header>
 
-<main>
-  <h1>DOE-2.2 &rarr; Excel extractor</h1>
-  <p class="lead">Drop in your <code>.SIM</code> and <code>.inp</code> files, click Generate. Outputs a formatted <code>.xlsx</code> with <b>BL Data</b> and <b>Proposed Data</b> tabs &mdash; same shape as the Python pipeline. No upload, no server.</p>
+    <main>
+        <div class="hero">
+            <h1>DOE-2.2 <span>→</span> Excel</h1>
+            <p>Drop in your <code>.SIM</code> and optional <code>.inp</code> files, configure, then click Generate.
+                Outputs a formatted <code>.xlsx</code> with <b>BL Data</b> and <b>Proposed Data</b> tabs — same shape as
+                the Python pipeline. No upload, no server.</p>
+        </div>
 
-  <h2>1. Files</h2>
-  <div class="grid-2">
-    <div>
-      <label class="dropzone sim" data-target="blSim">
-        <div class="label">Baseline .SIM file(s)</div>
-        <div class="hint">Drop or click to select</div>
-        <input type="file" multiple accept=".sim,.SIM" />
-      </label>
-      <div class="chips" id="chips-blSim"></div>
-    </div>
+        <!-- FILES -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-num">1</div>
+                <div class="section-title">Files</div>
+            </div>
+            <div class="section-body">
+                <div class="drop-grid">
+                    <!-- BL SIM -->
+                    <div class="drop-group">
+                        <div class="drop-label">
+                            <span class="badge badge-bl">BL</span>
+                            Baseline .SIM file(s)
+                        </div>
+                        <label class="dropzone" data-target="blSim">
+                            <input type="file" multiple accept=".sim,.SIM" />
+                            <div class="dropzone-icon">📄</div>
+                            <div class="dropzone-text">Drop files or click to browse</div>
+                            <div class="dropzone-hint">.sim / .SIM</div>
+                        </label>
+                        <div class="chips" id="chips-blSim"></div>
+                    </div>
 
-    <div>
-      <label class="dropzone inp" data-target="blInp">
-        <div class="label">Baseline .inp file(s) <span style="color:var(--gray-500);font-weight:400">(optional)</span></div>
-        <div class="hint">Drop or click to select</div>
-        <input type="file" multiple accept=".inp,.INP" />
-      </label>
-      <div class="chips" id="chips-blInp"></div>
-    </div>
+                    <!-- BL INP -->
+                    <div class="drop-group">
+                        <div class="drop-label">
+                            <span class="badge badge-bl">BL</span>
+                            Baseline .inp file(s)
+                            <span class="badge badge-opt">optional</span>
+                        </div>
+                        <label class="dropzone" data-target="blInp">
+                            <input type="file" multiple accept=".inp,.INP" />
+                            <div class="dropzone-icon">📋</div>
+                            <div class="dropzone-text">Drop files or click to browse</div>
+                            <div class="dropzone-hint">.inp / .INP</div>
+                        </label>
+                        <div class="chips" id="chips-blInp"></div>
+                    </div>
 
-    <div>
-      <label class="dropzone sim" data-target="propSim">
-        <div class="label">Proposed .SIM file(s)</div>
-        <div class="hint">Drop or click to select</div>
-        <input type="file" multiple accept=".sim,.SIM" />
-      </label>
-      <div class="chips" id="chips-propSim"></div>
-    </div>
+                    <!-- PROP SIM -->
+                    <div class="drop-group">
+                        <div class="drop-label">
+                            <span class="badge badge-prop">Prop</span>
+                            Proposed .SIM file(s)
+                        </div>
+                        <label class="dropzone" data-target="propSim">
+                            <input type="file" multiple accept=".sim,.SIM" />
+                            <div class="dropzone-icon">📄</div>
+                            <div class="dropzone-text">Drop files or click to browse</div>
+                            <div class="dropzone-hint">.sim / .SIM</div>
+                        </label>
+                        <div class="chips" id="chips-propSim"></div>
+                    </div>
 
-    <div>
-      <label class="dropzone inp" data-target="propInp">
-        <div class="label">Proposed .inp file(s) <span style="color:var(--gray-500);font-weight:400">(optional)</span></div>
-        <div class="hint">Drop or click to select</div>
-        <input type="file" multiple accept=".inp,.INP" />
-      </label>
-      <div class="chips" id="chips-propInp"></div>
-    </div>
-  </div>
+                    <!-- PROP INP -->
+                    <div class="drop-group">
+                        <div class="drop-label">
+                            <span class="badge badge-prop">Prop</span>
+                            Proposed .inp file(s)
+                            <span class="badge badge-opt">optional</span>
+                        </div>
+                        <label class="dropzone" data-target="propInp">
+                            <input type="file" multiple accept=".inp,.INP" />
+                            <div class="dropzone-icon">📋</div>
+                            <div class="dropzone-text">Drop files or click to browse</div>
+                            <div class="dropzone-hint">.inp / .INP</div>
+                        </label>
+                        <div class="chips" id="chips-propInp"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  <h2>2. Configuration</h2>
-  <div class="grid-4">
-    <div>
-      <label class="field" for="optionLabel">Option Label</label>
-      <input type="text" id="optionLabel" placeholder="e.g. Baseline ASHRAE 90.1-2019" />
-    </div>
-    <div>
-      <label class="field" for="climateZone">Climate Zone</label>
-      <select id="climateZone">
-        <option value="">&mdash;</option>
-        <option>1A</option><option>2A</option><option>2B</option>
-        <option>3A</option><option>3B</option><option>3C</option>
-        <option>4A</option><option>4B</option><option>4C</option>
-        <option>5A</option><option>5B</option><option>5C</option>
-        <option>6A</option><option>6B</option>
-        <option>7</option><option>8</option>
-      </select>
-    </div>
-    <div>
-      <label class="field" for="outputName">Output Filename</label>
-      <input type="text" id="outputName" value="energy_results.xlsx" />
-    </div>
-    <div>
-      <label class="field">Pairing</label>
-      <div class="checkbox-row">
-        <input type="checkbox" id="autoPair" checked />
-        <label for="autoPair">Auto-pair .inp by index</label>
-      </div>
-    </div>
-  </div>
+        <!-- CONFIGURATION -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-num">2</div>
+                <div class="section-title">Configuration</div>
+            </div>
+            <div class="section-body">
+                <div class="config-grid">
+                    <div>
+                        <label class="field-label" for="optionLabel">Option Label</label>
+                        <input type="text" id="optionLabel" placeholder="e.g. Baseline ASHRAE 90.1-2019" />
+                    </div>
+                    <div>
+                        <label class="field-label" for="climateZone">Climate Zone</label>
+                        <select id="climateZone">
+                            <option value="">— select —</option>
+                            <option>1A</option>
+                            <option>2A</option>
+                            <option>2B</option>
+                            <option>3A</option>
+                            <option>3B</option>
+                            <option>3C</option>
+                            <option>4A</option>
+                            <option>4B</option>
+                            <option>4C</option>
+                            <option>5A</option>
+                            <option>5B</option>
+                            <option>5C</option>
+                            <option>6A</option>
+                            <option>6B</option>
+                            <option>7</option>
+                            <option>8</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label" for="outputName">Output Filename</label>
+                        <input type="text" id="outputName" value="energy_results.xlsx" />
+                    </div>
+                    <div>
+                        <label class="field-label">Pairing</label>
+                        <div class="checkbox-wrap" style="margin-top:6px">
+                            <input type="checkbox" id="autoPair" checked />
+                            <label for="autoPair">Auto-pair .inp by index</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="actions-bar">
+                <button class="btn-primary" id="runBtn" disabled>
+                    ⬇ Generate Excel
+                </button>
+                <button class="btn-ghost" id="clearBtn">Clear all</button>
+                <div class="status-txt">
+                    <div class="spinner" id="spinner"></div>
+                    <span id="status"></span>
+                </div>
+            </div>
+        </div>
 
-  <h2>3. Generate</h2>
-  <div class="actions">
-    <button class="primary" id="runBtn" disabled>Generate Excel</button>
-    <button class="ghost" id="clearBtn">Clear all</button>
-    <span id="status" style="color:var(--gray-500); font-size:12px;"></span>
-  </div>
+        <!-- LOG -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-num">3</div>
+                <div class="section-title">Output Log</div>
+            </div>
+            <div class="section-body" style="padding:12px">
+                <pre class="log" id="log"><span class="dim">Ready. Drop a .SIM file to begin.</span></pre>
+            </div>
+        </div>
+    </main>
 
-  <pre class="log" id="log"><span class="dim">Ready. Drop a .SIM file to begin.</span></pre>
-</main>
+    <footer>
+        <span>♥</span> built for energy modelers · epAutomate runs locally, your files never leave this browser
+    </footer>
 
-<footer>
-  <span class="red">&hearts;</span> built for energy modelers &middot; epAutomate runs locally, your files never leave this browser
-</footer>
+    <div class="toast" id="toast"></div>
 
-<div class="toast" id="toast"></div>
+    <script>
+        "use strict";
 
-<script>
-"use strict";
+        /* ============================================================
+         *  STATE
+         * ============================================================ */
+        const state = { blSim: [], blInp: [], propSim: [], propInp: [] };
 
-/* ============================================================
- *  STATE
- * ============================================================ */
-const state = {
-  blSim: [], blInp: [],
-  propSim: [], propInp: [],
-};
+        /* ============================================================
+         *  UTIL
+         * ============================================================ */
+        const $ = s => document.querySelector(s);
 
-/* ============================================================
- *  UTIL
- * ============================================================ */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => document.querySelectorAll(sel);
-
-function logLine(html) {
-  const el = $("#log");
-  el.innerHTML += "\n" + html;
-  el.scrollTop = el.scrollHeight;
-}
-function logClear() { $("#log").innerHTML = ""; }
-function toast(msg) {
-  const t = $("#toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1800);
-}
-
-function readFileText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-    r.readAsText(file);
-  });
-}
-
-function floats(line) {
-  const m = line.match(/[-+]?\d+\.?\d*/g);
-  return m ? m.map(parseFloat) : [];
-}
-
-/* ============================================================
- *  SIM PARSER  (port of sim_parser.py)
- * ============================================================ */
-const MONTH_NAMES = {1:"JAN",2:"FEB",3:"MAR",4:"APR",5:"MAY",6:"JUN",7:"JUL",8:"AUG",9:"SEP",10:"OCT",11:"NOV",12:"DEC"};
-
-class SIMParser {
-  constructor(text, name) {
-    this.text = text;
-    this.name = name;
-    this.lines = text.split(/\r?\n/);
-    this.r = {};
-  }
-  parse() {
-    this._header();
-    this._psb();
-    this._pse();
-    this._ssd();
-    this._ssr();
-    this._lvb();
-    this._lvc();
-    this._sva();
-    this._derived();
-    return this.r;
-  }
-
-  _header() {
-    const r = this.r;
-    const line1 = this.lines[0] || "";
-    r.project_name = line1.slice(0, 65).trim();
-    const tm = line1.match(/(\d+\/\d+\/\d{4})\s+(\d+:\d+:\d+)/);
-    r.timestamp = tm ? `${tm[1]} ${tm[2]}` : "";
-    r.weather_file = "";
-    for (let i = 0; i < Math.min(20, this.lines.length); i++) {
-      const wm = this.lines[i].match(/WEATHER FILE-\s+(.+?)(?:\s{2,}|$)/);
-      if (wm) { r.weather_file = wm[1].trim(); break; }
-    }
-  }
-
-  _psb() {
-    const r = this.r;
-    Object.assign(r, {kwh_annual:0, max_kw:0, peak_elec_mon_day:"", therm_annual:0, max_therm_hr:0});
-    let in_psb=false, in_em1=false, in_fm1=false, after_max=false;
-    for (const line of this.lines) {
-      if (line.includes("REPORT- PS-B")) { in_psb=true; in_em1=false; in_fm1=false; after_max=false; continue; }
-      if (!in_psb) continue;
-      if (/^REPORT-\s/.test(line) && !line.includes("PS-B")) { in_psb=false; continue; }
-      const s = line.trim();
-      if (s.startsWith("EM1")) { in_em1=true; in_fm1=false; after_max=false; continue; }
-      if (s.startsWith("FM1")) { in_fm1=true; in_em1=false; continue; }
-      if (in_em1) {
-        if (s.startsWith("KWH")) {
-          const n = floats(s.replace("KWH",""));
-          if (n.length) r.kwh_annual = n[n.length-1];
-        } else if (s.startsWith("MAX KW")) {
-          const n = floats(s.replace("MAX KW",""));
-          if (n.length) r.max_kw = n[n.length-1];
-          after_max = true;
-        } else if (after_max && s.startsWith("DAY/HR")) {
-          const toks = s.split(/\s+/);
-          if (toks.length) r.peak_elec_mon_day = toks[toks.length-1];
-          after_max=false; in_em1=false;
+        function logLine(html) {
+            const el = $("#log");
+            el.innerHTML += "\n" + html;
+            el.scrollTop = el.scrollHeight;
         }
-      }
-      if (in_fm1) {
-        if (s.startsWith("THERM")) {
-          const n = floats(s.replace("THERM",""));
-          if (n.length) r.therm_annual = n[n.length-1];
-        } else if (s.startsWith("MAX THERM/HR")) {
-          const n = floats(s.replace("MAX THERM/HR",""));
-          if (n.length) r.max_therm_hr = n[n.length-1];
-          in_fm1=false;
+        function logClear() { $("#log").innerHTML = ""; }
+        function toast(msg) {
+            const t = $("#toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 2000);
         }
-      }
-    }
-  }
-
-  _pse() {
-    const r = this.r;
-    Object.assign(r, {
-      ps_e_lights_kwh:0, ps_e_misc_kwh:0, ps_e_htg_kwh:0, ps_e_clg_kwh:0,
-      ps_e_heat_reject_kwh:0, ps_e_pumps_kwh:0, ps_e_fans_kwh:0, ps_e_dhw_kwh:0,
-      ps_e_ext_kwh:0, ps_e_total_kwh:0,
-      ps_e_htg_mbtu:0, ps_e_dhw_mbtu:0, ps_e_total_mbtu:0,
-    });
-    let in_e=false, in_f=false, sep_e=false, sep_f=false;
-    for (const line of this.lines) {
-      const cont = line.includes("CONTINUED");
-      if (line.includes("REPORT- PS-E Energy End-Use Summary for all Electric")) {
-        if (!cont) sep_e=false;
-        in_e=true; in_f=false; continue;
-      }
-      if (line.includes("REPORT- PS-E Energy End-Use Summary for all Fuel")) {
-        if (!cont) sep_f=false;
-        in_f=true; in_e=false; continue;
-      }
-      if (/^REPORT-\s/.test(line) && !line.includes("PS-E")) { in_e=false; in_f=false; continue; }
-      const s = line.trim();
-      if (in_e) {
-        if (s.includes("=======")) { sep_e=true; continue; }
-        if (sep_e && s.startsWith("KWH")) {
-          const n = floats(s.replace("KWH",""));
-          if (n.length >= 13) {
-            r.ps_e_lights_kwh=n[0]; r.ps_e_misc_kwh=n[2]; r.ps_e_htg_kwh=n[3];
-            r.ps_e_clg_kwh=n[4]; r.ps_e_heat_reject_kwh=n[5]; r.ps_e_pumps_kwh=n[6];
-            r.ps_e_fans_kwh=n[7]; r.ps_e_dhw_kwh=n[10]; r.ps_e_ext_kwh=n[11]; r.ps_e_total_kwh=n[12];
-          }
-          in_e=false;
+        function readFileText(file) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = () => rej(r.error);
+                r.readAsText(file);
+            });
         }
-      }
-      if (in_f) {
-        if (s.includes("=======")) { sep_f=true; continue; }
-        if (sep_f && s.startsWith("MBTU")) {
-          const n = floats(s.replace("MBTU",""));
-          if (n.length >= 13) {
-            r.ps_e_htg_mbtu=n[3]; r.ps_e_dhw_mbtu=n[10]; r.ps_e_total_mbtu=n[12];
-          }
-          in_f=false;
+        function floats(line) {
+            const m = line.match(/[-+]?\d+\.?\d*/g);
+            return m ? m.map(parseFloat) : [];
         }
-      }
-    }
-  }
 
-  _ssd() {
-    const r = this.r;
-    Object.assign(r, {peak_cooling_kbtuh:0, peak_heating_kbtuh:0, peak_elec_kw:0, peak_cooling_time:"", peak_heating_time:""});
-    let in_ssd=false; let monthly=[];
-    for (const line of this.lines) {
-      if (line.includes("REPORT- SS-D")) { in_ssd=true; monthly=[]; continue; }
-      if (!in_ssd) continue;
-      if (/^REPORT-\s/.test(line) && !line.includes("SS-D")) { in_ssd=false; continue; }
-      const s = line.trim();
-      const mm = s.match(/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(.+)$/);
-      if (mm) {
-        const n = floats(mm[2]);
-        if (n.length >= 14) {
-          monthly.push({
-            month: mm[1],
-            clg_energy:n[0], clg_dy:Math.trunc(n[1]), clg_hr:Math.trunc(n[2]),
-            max_clg:n[5], htg_energy:n[6], htg_dy:Math.trunc(n[7]), htg_hr:Math.trunc(n[8]),
-            max_htg:Math.abs(n[11]), elec_kwh:n[12], max_kw:n[13],
-          });
+        /* ============================================================
+         *  SIM PARSER
+         * ============================================================ */
+        const MONTH_NAMES = { 1: "JAN", 2: "FEB", 3: "MAR", 4: "APR", 5: "MAY", 6: "JUN", 7: "JUL", 8: "AUG", 9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC" };
+
+        class SIMParser {
+            constructor(text, name) {
+                this.text = text; this.name = name;
+                this.lines = text.split(/\r?\n/); this.r = {};
+            }
+            parse() {
+                this._header(); this._psb(); this._pse(); this._ssd();
+                this._ssr(); this._lvb(); this._lvc(); this._sva(); this._derived();
+                return this.r;
+            }
+            _header() {
+                const r = this.r;
+                const line1 = this.lines[0] || "";
+                r.project_name = line1.slice(0, 65).trim();
+                const tm = line1.match(/(\d+\/\d+\/\d{4})\s+(\d+:\d+:\d+)/);
+                r.timestamp = tm ? `${tm[1]} ${tm[2]}` : "";
+                r.weather_file = "";
+                for (let i = 0; i < Math.min(20, this.lines.length); i++) {
+                    const wm = this.lines[i].match(/WEATHER FILE-\s+(.+?)(?:\s{2,}|$)/);
+                    if (wm) { r.weather_file = wm[1].trim(); break; }
+                }
+            }
+            _psb() {
+                const r = this.r;
+                Object.assign(r, { kwh_annual: 0, max_kw: 0, peak_elec_mon_day: "", therm_annual: 0, max_therm_hr: 0 });
+                let in_psb = false, in_em1 = false, in_fm1 = false, after_max = false;
+                for (const line of this.lines) {
+                    if (line.includes("REPORT- PS-B")) { in_psb = true; in_em1 = false; in_fm1 = false; after_max = false; continue; }
+                    if (!in_psb) continue;
+                    if (/^REPORT-\s/.test(line) && !line.includes("PS-B")) { in_psb = false; continue; }
+                    const s = line.trim();
+                    if (s.startsWith("EM1")) { in_em1 = true; in_fm1 = false; after_max = false; continue; }
+                    if (s.startsWith("FM1")) { in_fm1 = true; in_em1 = false; continue; }
+                    if (in_em1) {
+                        if (s.startsWith("KWH")) { const n = floats(s.replace("KWH", "")); if (n.length) r.kwh_annual = n[n.length - 1]; }
+                        else if (s.startsWith("MAX KW")) { const n = floats(s.replace("MAX KW", "")); if (n.length) r.max_kw = n[n.length - 1]; after_max = true; }
+                        else if (after_max && s.startsWith("DAY/HR")) { const t = s.split(/\s+/); if (t.length) r.peak_elec_mon_day = t[t.length - 1]; after_max = false; in_em1 = false; }
+                    }
+                    if (in_fm1) {
+                        if (s.startsWith("THERM")) { const n = floats(s.replace("THERM", "")); if (n.length) r.therm_annual = n[n.length - 1]; }
+                        else if (s.startsWith("MAX THERM/HR")) { const n = floats(s.replace("MAX THERM/HR", "")); if (n.length) r.max_therm_hr = n[n.length - 1]; in_fm1 = false; }
+                    }
+                }
+            }
+            _pse() {
+                const r = this.r;
+                Object.assign(r, {
+                    ps_e_lights_kwh: 0, ps_e_misc_kwh: 0, ps_e_htg_kwh: 0, ps_e_clg_kwh: 0,
+                    ps_e_heat_reject_kwh: 0, ps_e_pumps_kwh: 0, ps_e_fans_kwh: 0, ps_e_dhw_kwh: 0,
+                    ps_e_ext_kwh: 0, ps_e_total_kwh: 0, ps_e_htg_mbtu: 0, ps_e_dhw_mbtu: 0, ps_e_total_mbtu: 0
+                });
+                let in_e = false, in_f = false, sep_e = false, sep_f = false;
+                for (const line of this.lines) {
+                    const cont = line.includes("CONTINUED");
+                    if (line.includes("REPORT- PS-E Energy End-Use Summary for all Electric")) { if (!cont) sep_e = false; in_e = true; in_f = false; continue; }
+                    if (line.includes("REPORT- PS-E Energy End-Use Summary for all Fuel")) { if (!cont) sep_f = false; in_f = true; in_e = false; continue; }
+                    if (/^REPORT-\s/.test(line) && !line.includes("PS-E")) { in_e = false; in_f = false; continue; }
+                    const s = line.trim();
+                    if (in_e) {
+                        if (s.includes("=======")) { sep_e = true; continue; }
+                        if (sep_e && s.startsWith("KWH")) {
+                            const n = floats(s.replace("KWH", ""));
+                            if (n.length >= 13) { r.ps_e_lights_kwh = n[0]; r.ps_e_misc_kwh = n[2]; r.ps_e_htg_kwh = n[3]; r.ps_e_clg_kwh = n[4]; r.ps_e_heat_reject_kwh = n[5]; r.ps_e_pumps_kwh = n[6]; r.ps_e_fans_kwh = n[7]; r.ps_e_dhw_kwh = n[10]; r.ps_e_ext_kwh = n[11]; r.ps_e_total_kwh = n[12]; }
+                            in_e = false;
+                        }
+                    }
+                    if (in_f) {
+                        if (s.includes("=======")) { sep_f = true; continue; }
+                        if (sep_f && s.startsWith("MBTU")) { const n = floats(s.replace("MBTU", "")); if (n.length >= 13) { r.ps_e_htg_mbtu = n[3]; r.ps_e_dhw_mbtu = n[10]; r.ps_e_total_mbtu = n[12]; } in_f = false; }
+                    }
+                }
+            }
+            _ssd() {
+                const r = this.r;
+                Object.assign(r, { peak_cooling_kbtuh: 0, peak_heating_kbtuh: 0, peak_elec_kw: 0, peak_cooling_time: "", peak_heating_time: "" });
+                let in_ssd = false; let monthly = [];
+                for (const line of this.lines) {
+                    if (line.includes("REPORT- SS-D")) { in_ssd = true; monthly = []; continue; }
+                    if (!in_ssd) continue;
+                    if (/^REPORT-\s/.test(line) && !line.includes("SS-D")) { in_ssd = false; continue; }
+                    const s = line.trim();
+                    const mm = s.match(/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(.+)$/);
+                    if (mm) {
+                        const n = floats(mm[2]);
+                        if (n.length >= 14) monthly.push({ month: mm[1], clg_energy: n[0], clg_dy: Math.trunc(n[1]), clg_hr: Math.trunc(n[2]), max_clg: n[5], htg_energy: n[6], htg_dy: Math.trunc(n[7]), htg_hr: Math.trunc(n[8]), max_htg: Math.abs(n[11]), elec_kwh: n[12], max_kw: n[13] });
+                        continue;
+                    }
+                    if (s.startsWith("MAX")) { const n = floats(s.replace("MAX", "")); if (n.length >= 3) { r.peak_cooling_kbtuh = Math.abs(n[0]); r.peak_heating_kbtuh = Math.abs(n[1]); r.peak_elec_kw = Math.abs(n[2]); } }
+                }
+                if (monthly.length) {
+                    const bc = monthly.reduce((a, b) => b.max_clg > a.max_clg ? b : a);
+                    r.peak_cooling_time = `${bc.month} ${String(bc.clg_dy).padStart(2, "0")} ${String(bc.clg_hr).padStart(2, "0")}:00`;
+                    const bh = monthly.reduce((a, b) => b.max_htg > a.max_htg ? b : a);
+                    r.peak_heating_time = `${bh.month} ${String(bh.htg_dy).padStart(2, "0")} ${String(bh.htg_hr).padStart(2, "0")}:00`;
+                }
+                if (r.peak_elec_mon_day) {
+                    const parts = r.peak_elec_mon_day.split("/");
+                    if (parts.length === 2) {
+                        const mn = parseInt(parts[0], 10), d = parseInt(parts[1], 10);
+                        const monName = MONTH_NAMES[mn] || ""; let hr = 0;
+                        for (const row of monthly) { if (row.month === monName) { hr = row.max_clg > 0 ? row.clg_hr : row.htg_hr; break; } }
+                        r.peak_elec_time = monName ? `${monName} ${String(d).padStart(2, "0")} ${String(hr).padStart(2, "0")}:00` : "";
+                    } else r.peak_elec_time = "";
+                } else r.peak_elec_time = "";
+            }
+            _ssr() {
+                const r = this.r; r.unmet_heating_hrs = 0; r.unmet_cooling_hrs = 0;
+                for (const line of this.lines) {
+                    const m = line.match(/^\s+TOTAL\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
+                    if (m) { r.unmet_heating_hrs += parseInt(m[3], 10); r.unmet_cooling_hrs += parseInt(m[4], 10); }
+                }
+            }
+            _lvb() {
+                const r = this.r;
+                Object.assign(r, { total_area: 0, total_volume: 0, total_people: 0, conditioned_area: 0, conditioned_people: 0, lpd_sum: 0, epd_sum: 0, spaces: [] });
+                for (const line of this.lines) {
+                    if (line.startsWith("BUILDING TOTALS")) {
+                        const n = floats(line.replace("BUILDING TOTALS", ""));
+                        if (n.length >= 3) { r.total_people = n[0]; r.total_area = n[1]; r.total_volume = n[2]; }
+                        else if (n.length === 2) { r.total_area = n[0]; r.total_volume = n[1]; }
+                        break;
+                    }
+                }
+                const sp_re = /^(.{1,50}?)\s{2,}([\d.]+)\s+(EXT|INT)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+\S+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/;
+                for (const line of this.lines) {
+                    const m = line.match(sp_re);
+                    if (m) {
+                        const mult = parseFloat(m[2]), lights = parseFloat(m[5]), people = parseFloat(m[6]), equip = parseFloat(m[7]);
+                        const area = parseFloat(m[9]) * mult, volume = parseFloat(m[10]) * mult, cond = lights > 0 || people > 0;
+                        r.spaces.push({ name: m[1].trim(), mult, type: m[3], lights, people, equip, area, volume, conditioned: cond });
+                        if (cond) { r.conditioned_area += area; r.conditioned_people += people * mult; r.lpd_sum += lights * area; r.epd_sum += equip * area; }
+                    }
+                }
+                if (!r.total_area && r.spaces.length) r.total_area = r.spaces.reduce((a, s) => a + s.area, 0);
+            }
+            _lvc() {
+                const r = this.r; r.window_data = []; r.ext_wall_data = []; r.underground_data = []; r.roof_data = [];
+                let in_lvc = false, in_w = false, in_es = false, in_ug = false;
+                for (const line of this.lines) {
+                    if (line.includes("REPORT- LV-C")) { in_lvc = true; in_w = false; in_es = false; in_ug = false; continue; }
+                    if (!in_lvc) continue;
+                    if (/^REPORT-\s/.test(line) && !line.includes("LV-C")) { in_lvc = false; continue; }
+                    const s = line.trim();
+                    if (line.includes("EXTERIOR WINDOWS")) { in_w = true; in_es = false; in_ug = false; continue; }
+                    if (line.includes("EXTERIOR SURFACES")) { in_es = true; in_w = false; in_ug = false; continue; }
+                    if (line.includes("UNDERGROUND SURFACES")) { in_ug = true; in_w = false; in_es = false; continue; }
+                    if (line.includes("INTERIOR SURFACES") || line.includes("PEOPLE") || line.includes("LIGHTING")) in_w = false;
+                    if (in_w && s && !s.startsWith("WINDOW") && !s.startsWith("GLASS")) {
+                        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+                        if (m) { const mult = parseFloat(m[2]), area = parseFloat(m[3]) * mult, u = parseFloat(m[8]), sc = parseFloat(m[9]), vlt = parseFloat(m[10]), shgc = sc * 0.87, lsg = shgc > 0 ? vlt / shgc : 0; r.window_data.push({ area, u_value: u, sc, shgc, vlt, lsg }); continue; }
+                    }
+                    if (in_es && s && !s.startsWith("SURFACE")) {
+                        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+(\S.+?)\s+([\d.]+)\s+(DELAYED|QUICK)\s*/);
+                        if (m) { r.ext_wall_data.push({ area: parseFloat(m[3]) * parseFloat(m[2]), u_value: parseFloat(m[5]) }); continue; }
+                    }
+                    if (in_ug && s && !s.startsWith("SURFACE")) {
+                        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+(\S.+?)\s+([\d.]+)\s*$/);
+                        if (m) r.underground_data.push({ area: parseFloat(m[3]) * parseFloat(m[2]), u_value: parseFloat(m[5]) });
+                    }
+                }
+                const sumA = arr => arr.reduce((a, b) => a + b.area, 0);
+                const wAvg = (arr, key) => { const t = sumA(arr); return t > 0 ? arr.reduce((a, b) => a + b[key] * b.area, 0) / t : 0; };
+                const tw = sumA(r.window_data); r.total_window_area = tw;
+                if (tw > 0) { r.glass_u_value = wAvg(r.window_data, "u_value"); r.glass_shgc = wAvg(r.window_data, "shgc"); r.glass_vlt = wAvg(r.window_data, "vlt"); r.glass_lsg = r.glass_shgc > 0 ? r.glass_vlt / r.glass_shgc : 0; }
+                else { r.glass_u_value = 0; r.glass_shgc = 0; r.glass_vlt = 0; r.glass_lsg = 0; }
+                const tww = sumA(r.ext_wall_data); r.total_wall_area = tww; r.wall_u_value = tww > 0 ? wAvg(r.ext_wall_data, "u_value") : 0;
+                const tug = sumA(r.underground_data); r.slab_u_value = tug > 0 ? wAvg(r.underground_data, "u_value") : 0;
+            }
+            _sva() {
+                const r = this.r;
+                Object.assign(r, { total_supply_cfm: 0, total_oa_cfm: 0, total_fan_kw: 0, cooling_eir_list: [], heating_eir_list: [] });
+                let in_sva = false;
+                for (const line of this.lines) {
+                    if (line.includes("REPORT- SV-A")) { in_sva = true; continue; }
+                    if (!in_sva) continue;
+                    if (/^REPORT-\s/.test(line) && !line.includes("SV-A")) { in_sva = false; continue; }
+                    const s = line.trim();
+                    if (/^SUPPLY\s+[\d.]+/.test(s)) { const n = floats(s.replace("SUPPLY", "")); if (n.length) { r.total_supply_cfm += n[0]; if (n.length >= 3) r.total_fan_kw += n[2]; } continue; }
+                    if (/^(PSZ|PVAVS?|VAVS?|FPFC?|SZRH|PTAC|PTHP|HVSYS)\s/.test(s)) { const n = floats(s); if (n.length >= 10) { const ce = n[7], he = n[8]; if (ce > 0) r.cooling_eir_list.push(1 / ce); if (he > 0) r.heating_eir_list.push(1 / he); } continue; }
+                    const zm = line.match(/^(.+?)\s+([\d.]+)\.\s+([\d.]+)\.\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\./);
+                    if (zm) r.total_oa_cfm += parseFloat(zm[6]);
+                }
+                r.dx_cooling_cop = r.cooling_eir_list.length ? r.cooling_eir_list.reduce((a, b) => a + b, 0) / r.cooling_eir_list.length : 0;
+                r.dx_heating_cop = r.heating_eir_list.length ? r.heating_eir_list.reduce((a, b) => a + b, 0) / r.heating_eir_list.length : 0;
+            }
+            _derived() {
+                const r = this.r;
+                const KWH_TO_KBTU = 3.412, THERM_TO_KBTU = 100, MBTU_TO_KBTU = 1000;
+                r.electricity_kbtu = r.kwh_annual * KWH_TO_KBTU; r.gas_kbtu = r.therm_annual * THERM_TO_KBTU;
+                r.int_lighting_kbtu = r.ps_e_lights_kwh * KWH_TO_KBTU; r.int_equip_kbtu = r.ps_e_misc_kwh * KWH_TO_KBTU;
+                r.htg_elec_kbtu = r.ps_e_htg_kwh * KWH_TO_KBTU; r.clg_elec_kbtu = r.ps_e_clg_kwh * KWH_TO_KBTU;
+                r.heat_reject_kbtu = r.ps_e_heat_reject_kwh * KWH_TO_KBTU; r.pumps_kbtu = r.ps_e_pumps_kwh * KWH_TO_KBTU;
+                r.fans_kbtu = r.ps_e_fans_kwh * KWH_TO_KBTU; r.water_sys_elec_kbtu = r.ps_e_dhw_kwh * KWH_TO_KBTU;
+                r.ext_lighting_kbtu = r.ps_e_ext_kwh * KWH_TO_KBTU; r.htg_gas_kbtu = r.ps_e_htg_mbtu * MBTU_TO_KBTU;
+                r.water_sys_gas_kbtu = r.ps_e_dhw_mbtu * MBTU_TO_KBTU;
+                r.total_energy_kbtu = r.electricity_kbtu + r.gas_kbtu;
+                const total_area = r.total_area || 0; let cond = r.conditioned_area || 0;
+                if (cond === 0) cond = total_area;
+                r.conditioned_floor_area = cond; r.total_floor_area = total_area;
+                const ref = total_area > 0 ? total_area : 1;
+                r.eui_kbtu_ft2 = r.total_energy_kbtu / ref;
+                r.peak_elec_w = (r.peak_elec_kw || r.max_kw || 0) * 1000;
+                r.peak_elec_w_per_ft2 = r.peak_elec_w / ref;
+                r.peak_cooling_btuh_ft2 = (r.peak_cooling_kbtuh || 0) * 1000 / ref;
+                r.peak_heating_btuh_ft2 = (r.peak_heating_kbtuh || 0) * 1000 / ref;
+                const cref = cond > 0 ? cond : 1;
+                r.lpd_w_ft2 = (r.lpd_sum || 0) / cref; r.epd_w_ft2 = (r.epd_sum || 0) / cref;
+                r.lpd_total_w_ft2 = (r.lpd_sum || 0) / ref; r.epd_total_w_ft2 = (r.epd_sum || 0) / ref;
+                r.occ_density_ft2_person = r.total_people > 0 ? total_area / r.total_people : 0;
+                r.cond_occ_density_ft2_person = r.conditioned_people > 0 ? cond / r.conditioned_people : 0;
+                r.building_wwr = r.total_wall_area > 0 ? (r.total_window_area / r.total_wall_area * 100) : 0;
+                r.wall_r_value = r.wall_u_value > 0 ? 1 / r.wall_u_value : 0;
+                r.vent_cfm_per_ft2 = ref > 0 ? r.total_supply_cfm / ref : 0;
+                r.dhw_efficiency = 0; r.ext_lighting_kw = 0;
+            }
         }
-        continue;
-      }
-      if (s.startsWith("MAX")) {
-        const n = floats(s.replace("MAX",""));
-        if (n.length >= 3) {
-          r.peak_cooling_kbtuh = Math.abs(n[0]);
-          r.peak_heating_kbtuh = Math.abs(n[1]);
-          r.peak_elec_kw = Math.abs(n[2]);
+
+        /* ============================================================
+         *  INP PARSER
+         * ============================================================ */
+        const HDR_RE = /^\s*"([^"]+)"\s*=\s*([A-Z][A-Z0-9\-]+)\s*$/;
+        const BARE_HDR_RE = /^\s*([A-Z][A-Z0-9\-]+)\s*$/;
+        const PROP_RE = /^\s*([A-Z][A-Z0-9\-]+)\s*=\s*(.+?)\s*$/;
+
+        function azimuthToFacade(az) {
+            az = ((az % 360) + 360) % 360;
+            if (az < 45 || az >= 315) return "N";
+            if (az < 135) return "E";
+            if (az < 225) return "S";
+            return "W";
         }
-      }
-    }
-    if (monthly.length) {
-      const bc = monthly.reduce((a,b)=>b.max_clg>a.max_clg?b:a);
-      r.peak_cooling_time = `${bc.month} ${String(bc.clg_dy).padStart(2,"0")} ${String(bc.clg_hr).padStart(2,"0")}:00`;
-      const bh = monthly.reduce((a,b)=>b.max_htg>a.max_htg?b:a);
-      r.peak_heating_time = `${bh.month} ${String(bh.htg_dy).padStart(2,"0")} ${String(bh.htg_hr).padStart(2,"0")}:00`;
-    }
-    if (r.peak_elec_mon_day) {
-      const parts = r.peak_elec_mon_day.split("/");
-      if (parts.length === 2) {
-        const mn = parseInt(parts[0],10), d = parseInt(parts[1],10);
-        const monName = MONTH_NAMES[mn] || "";
-        let hr = 0;
-        for (const row of monthly) {
-          if (row.month === monName) { hr = row.max_clg > 0 ? row.clg_hr : row.htg_hr; break; }
+        function cleanValue(v) {
+            v = v.trim();
+            if (v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1);
+            if (v.startsWith("(") && v.endsWith(")")) {
+                const inner = v.slice(1, -1).trim();
+                return inner.split(",").map(x => { x = x.trim().replace(/^"|"$/g, ""); const n = parseFloat(x); return !isNaN(n) && /^-?\d+\.?\d*$/.test(x) ? n : x; });
+            }
+            const n = parseFloat(v);
+            if (!isNaN(n) && /^-?\d+\.?\d*([eE][-+]?\d+)?$/.test(v)) return n;
+            return v;
         }
-        if (monName) r.peak_elec_time = `${monName} ${String(d).padStart(2,"0")} ${String(hr).padStart(2,"0")}:00`;
-        else r.peak_elec_time = "";
-      } else r.peak_elec_time = "";
-    } else r.peak_elec_time = "";
-  }
 
-  _ssr() {
-    const r = this.r;
-    r.unmet_heating_hrs = 0; r.unmet_cooling_hrs = 0;
-    for (const line of this.lines) {
-      const m = line.match(/^\s+TOTAL\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/);
-      if (m) {
-        r.unmet_heating_hrs += parseInt(m[3],10);
-        r.unmet_cooling_hrs += parseInt(m[4],10);
-      }
-    }
-  }
-
-  _lvb() {
-    const r = this.r;
-    Object.assign(r, {
-      total_area:0, total_volume:0, total_people:0, conditioned_area:0, conditioned_people:0,
-      lpd_sum:0, epd_sum:0, spaces:[],
-    });
-    for (const line of this.lines) {
-      if (line.startsWith("BUILDING TOTALS")) {
-        const n = floats(line.replace("BUILDING TOTALS",""));
-        if (n.length >= 3) { r.total_people=n[0]; r.total_area=n[1]; r.total_volume=n[2]; }
-        else if (n.length === 2) { r.total_area=n[0]; r.total_volume=n[1]; }
-        break;
-      }
-    }
-    const sp_re = /^(.{1,50}?)\s{2,}([\d.]+)\s+(EXT|INT)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+\S+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/;
-    for (const line of this.lines) {
-      const m = line.match(sp_re);
-      if (m) {
-        const mult = parseFloat(m[2]);
-        const lights = parseFloat(m[5]);
-        const people = parseFloat(m[6]);
-        const equip = parseFloat(m[7]);
-        const area = parseFloat(m[9]) * mult;
-        const volume = parseFloat(m[10]) * mult;
-        const cond = lights > 0 || people > 0;
-        r.spaces.push({name:m[1].trim(), mult, type:m[3], lights, people, equip, area, volume, conditioned:cond});
-        if (cond) {
-          r.conditioned_area += area;
-          r.conditioned_people += people * mult;
-          r.lpd_sum += lights * area;
-          r.epd_sum += equip * area;
+        class INPParser {
+            constructor(text, name) { this.text = text; this.name = name; this.blocks = []; this.byType = {}; this.byName = {}; }
+            parse() {
+                if (!this.text) return {};
+                this._parseBlocks();
+                return { ...this._extractProject(), ...this._extractSite(), ...this._extractMeters(), ...this._extractRates(), ...this._extractGlass(), ...this._extractShading() };
+            }
+            _parseBlocks() {
+                let name = null, otype = null, props = {}, inBlock = false;
+                const commit = () => { if (otype !== null) { this.blocks.push([name, otype, props]); if (!this.byType[otype]) this.byType[otype] = []; this.byType[otype].push([name, props]); if (name) this.byName[name] = [otype, props]; } name = null; otype = null; props = {}; inBlock = false; };
+                for (let raw of this.text.split(/\r?\n/)) {
+                    let line = raw.replace(/\s+$/, ""); const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith("$")) continue;
+                    if (trimmed === "..") { commit(); continue; }
+                    if (line.replace(/\s+$/, "").endsWith("..")) line = line.slice(0, line.lastIndexOf("..")).replace(/\s+$/, "");
+                    let m = line.match(HDR_RE);
+                    if (m) { if (inBlock) commit(); name = m[1]; otype = m[2]; props = {}; inBlock = true; continue; }
+                    m = line.match(BARE_HDR_RE);
+                    if (m && !inBlock) { otype = m[1]; name = null; props = {}; inBlock = true; continue; }
+                    m = line.match(PROP_RE);
+                    if (m && inBlock) props[m[1]] = cleanValue(m[2]);
+                }
+                commit();
+            }
+            _extractProject() {
+                const out = { inp_title: "", inp_run_period: "", inp_holidays: "" };
+                for (const [, props] of (this.byType.TITLE || [])) { if (props["LINE-1"]) { out.inp_title = String(props["LINE-1"]).replace(/\*/g, ""); break; } }
+                for (const [, props] of (this.byType["RUN-PERIOD-PD"] || [])) { const bm = props["BEGIN-MONTH"], bd = props["BEGIN-DAY"], by = props["BEGIN-YEAR"], em = props["END-MONTH"], ed = props["END-DAY"], ey = props["END-YEAR"]; if (bm && em) out.inp_run_period = `${bm}/${bd}/${by} – ${em}/${ed}/${ey}`; break; }
+                for (const [n] of (this.byType.HOLIDAYS || [])) { if (n) { out.inp_holidays = n; break; } }
+                return out;
+            }
+            _extractSite() {
+                const out = { inp_altitude_ft: null, inp_building_azimuth: null };
+                for (const [, props] of (this.byType["SITE-PARAMETERS"] || [])) { if (props.ALTITUDE !== undefined) out.inp_altitude_ft = props.ALTITUDE; if (props.LATITUDE !== undefined) out.inp_latitude = props.LATITUDE; if (props.LONGITUDE !== undefined) out.inp_longitude = props.LONGITUDE; break; }
+                for (const [, props] of (this.byType["BUILD-PARAMETERS"] || [])) { if (props.AZIMUTH !== undefined) out.inp_building_azimuth = props.AZIMUTH; break; }
+                return out;
+            }
+            _extractMeters() {
+                const out = { inp_master_elec_meter: "", inp_master_fuel_meter: "" };
+                for (const [, props] of (this.byType["MASTER-METERS"] || [])) { out.inp_master_elec_meter = props["MSTR-ELEC-METER"] || ""; out.inp_master_fuel_meter = props["MSTR-FUEL-METER"] || ""; break; }
+                return out;
+            }
+            _extractRates() {
+                const out = { inp_elec_rate_per_kwh: null, inp_elec_rate_per_kbtu: null, inp_gas_rate_per_therm: null, inp_gas_rate_per_kbtu: null, inp_elec_monthly_chg: 0, inp_gas_monthly_chg: 0, inp_utility_rates: [] };
+                for (const [name, props] of (this.byType["UTILITY-RATE"] || [])) {
+                    const fuel = String(props.TYPE || "").toUpperCase(); let monthly = props["MONTH-CHGS"] || 0;
+                    if (Array.isArray(monthly)) monthly = monthly.filter(x => typeof x === "number").reduce((a, b) => a + b, 0);
+                    let refs = props["BLOCK-CHARGES"] || []; if (typeof refs === "string") refs = [refs];
+                    let tier1 = 0;
+                    for (const ref of refs) { if (this.byName[ref]) { const bprops = this.byName[ref][1]; let costs = bprops["COSTS-1"]; if (Array.isArray(costs) && costs.length) tier1 += parseFloat(costs[0]) || 0; else if (typeof costs === "number") tier1 += costs; } }
+                    out.inp_utility_rates.push({ name, fuel, monthly_charge: monthly, tier1_cost: tier1 });
+                    if (fuel.includes("ELEC")) { out.inp_elec_rate_per_kwh = tier1; out.inp_elec_rate_per_kbtu = tier1 ? tier1 / 3.412 : null; out.inp_elec_monthly_chg += parseFloat(monthly) || 0; }
+                    else if (fuel.includes("GAS") || fuel === "NATURAL-GAS") { out.inp_gas_rate_per_therm = tier1; out.inp_gas_rate_per_kbtu = tier1 ? tier1 / 100 : null; out.inp_gas_monthly_chg += parseFloat(monthly) || 0; }
+                }
+                return out;
+            }
+            _extractGlass() {
+                const codes = [], names = [];
+                for (const [name, props] of (this.byType["GLASS-TYPE"] || [])) { names.push(name); const code = props["GLASS-TYPE-CODE"]; if (code) codes.push(String(code)); }
+                return { inp_glass_type_names: names, inp_glass_type_codes: codes, inp_glass_type_code_list: codes.join(", ") };
+            }
+            _extractShading() {
+                let bldgAz = 0;
+                for (const [, props] of (this.byType["BUILD-PARAMETERS"] || [])) { bldgAz = parseFloat(props.AZIMUTH || 0) || 0; break; }
+                let curWallAz = null, curType = null, curProps = {};
+                const facades = { N: { w: 0, s: 0, o: 0, f: 0, d: 0 }, E: { w: 0, s: 0, o: 0, f: 0, d: 0 }, S: { w: 0, s: 0, o: 0, f: 0, d: 0 }, W: { w: 0, s: 0, o: 0, f: 0, d: 0 } };
+                for (const raw of this.text.split(/\r?\n/)) {
+                    const line = raw.trim();
+                    if (!line || line.startsWith("$")) continue;
+                    if (line === "..") {
+                        if (curType === "EXTERIOR-WALL") curWallAz = (parseFloat(curProps.AZIMUTH || 0) || 0) + bldgAz;
+                        else if (curType === "WINDOW" && curWallAz !== null) {
+                            const f = azimuthToFacade(curWallAz), b = facades[f]; b.w++;
+                            const keys = Object.keys(curProps), hasOH = keys.some(k => k.startsWith("OVERHANG-")), hasFin = keys.some(k => ["FIN-A", "FIN-B", "FIN-C", "FIN-D"].includes(k));
+                            if (hasOH) b.o++; if (hasFin) b.f++; if (hasOH || hasFin) b.s++;
+                            const d = parseFloat(curProps["OVERHANG-D"] || 0) || 0; if (d > b.d) b.d = d;
+                        }
+                        curType = null; curProps = {}; continue;
+                    }
+                    let m = line.match(HDR_RE);
+                    if (m) { curType = m[2]; curProps = {}; continue; }
+                    m = line.match(PROP_RE);
+                    if (m && curType) curProps[m[1]] = cleanValue(m[2]);
+                }
+                const out = {};
+                for (const f of ["N", "E", "S", "W"]) {
+                    const b = facades[f], pct = b.w ? (b.s / b.w * 100) : 0;
+                    out[`inp_${f.toLowerCase()}_shading_type`] = b.o && b.f ? "Overhang+Fin" : b.o ? "Overhang" : b.f ? "Fin" : "None";
+                    out[`inp_${f.toLowerCase()}_shading_ratio`] = Math.round(pct * 10) / 10;
+                    out[`inp_${f.toLowerCase()}_max_overhang_ft`] = Math.round(b.d * 100) / 100;
+                }
+                return out;
+            }
         }
-      }
-    }
-    if (!r.total_area && r.spaces.length) {
-      r.total_area = r.spaces.reduce((a,s)=>a+s.area, 0);
-    }
-  }
 
-  _lvc() {
-    const r = this.r;
-    r.window_data = []; r.ext_wall_data = []; r.underground_data = []; r.roof_data = [];
-    let in_lvc=false, in_w=false, in_es=false, in_ug=false;
+        /* ============================================================
+         *  COLUMN DEFINITIONS — exact headers matching Book1.xlsx
+         *  including intentional typos/spacing from the source file
+         * ============================================================ */
+        const C_BLUE = "4472C4", C_GREEN = "70AD47", C_ORANGE = "ED7D31", C_PURPLE = "7030A0",
+            C_GRAY = "808080", C_TEAL = "00B0F0", C_LIME = "92D050", C_RED = "FF0000";
 
-    for (const line of this.lines) {
-      if (line.includes("REPORT- LV-C")) { in_lvc=true; in_w=false; in_es=false; in_ug=false; continue; }
-      if (!in_lvc) continue;
-      if (/^REPORT-\s/.test(line) && !line.includes("LV-C")) { in_lvc=false; continue; }
-      const s = line.trim();
-      if (line.includes("EXTERIOR WINDOWS")) { in_w=true; in_es=false; in_ug=false; continue; }
-      if (line.includes("EXTERIOR SURFACES")) { in_es=true; in_w=false; in_ug=false; continue; }
-      if (line.includes("UNDERGROUND SURFACES")) { in_ug=true; in_w=false; in_es=false; continue; }
-      if (line.includes("INTERIOR SURFACES") || line.includes("PEOPLE") || line.includes("LIGHTING")) {
-        in_w = false;
-      }
+        // [header_label, data_key, number_format, fill_color]
+        const COLUMNS = [
+            ["Option", "option_name", "@", C_BLUE],
+            ["Results Path", "results_path", "@", C_BLUE],
+            ["Timestamp", "timestamp", "@", C_BLUE],
+            ["Climate File", "weather_file", "@", C_BLUE],
+            ["Climate Zone", "climate_zone", "@", C_BLUE],
+            ["Heating Unmet Hours", "unmet_heating_hrs", "#,##0", C_TEAL],
+            ["Cooling Unmet Hours", "unmet_cooling_hrs", "#,##0", C_TEAL],
+            ["Total Energy Use (kBtu)", "total_energy_kbtu", "#,##0", C_GREEN],
+            ["Energy Use Intensity (kBtu/ft\u00b2)", "eui_kbtu_ft2", "#,##0.0", C_GREEN],
+            ["Electricity (kBtu)", "electricity_kbtu", "#,##0", C_GREEN],
+            ["Gas (kBtu)", "gas_kbtu", "#,##0", C_GREEN],
+            ["Additional Fuel (kBtu)", "additional_fuel_kbtu", "#,##0", C_GREEN],
+            ["District Cooling (kBtu)", "district_cooling_kbtu", "#,##0", C_GREEN],
+            ["District Heating (kBtu)", "district_heating_kbtu", "#,##0", C_GREEN],
+            ["Heating - Electricity Energy Use (kBtu)", "htg_elec_kbtu", "#,##0", C_ORANGE],
+            ["Heating - Gas Energy Use (kBtu)", "htg_gas_kbtu", "#,##0", C_ORANGE],
+            ["Heating - Additonal Fuel Energy Use (kBtu)", "htg_add_fuel_kbtu", "#,##0", C_ORANGE],  // intentional typo "Additonal"
+            ["Heating - District Heating Energy Use (kBtu)", "htg_dist_htg_kbtu", "#,##0", C_ORANGE],
+            ["Cooling - Electricity Energy Use (kBtu)", "clg_elec_kbtu", "#,##0", C_ORANGE],
+            ["Cooling - District Energy Use (kBtu)", "clg_dist_kbtu", "#,##0", C_ORANGE],
+            ["Interior Lighting - Electricity Energy Use (kBtu)", "int_lighting_kbtu", "#,##0", C_ORANGE],
+            ["Exterior Lighting - Electricity Energy Use (kBtu)", "ext_lighting_kbtu", "#,##0", C_ORANGE],
+            ["Interior Equipment - Electricity Energy Use (kBtu)", "int_equip_kbtu", "#,##0", C_ORANGE],
+            ["Interior Equipment - Gas Energy Use (kBtu)", "int_equip_gas_kbtu", "#,##0", C_ORANGE],
+            ["Interior Equipment - Additional Fuel Energy Use (kBtu)", "int_equip_add_kbtu", "#,##0", C_ORANGE],
+            ["Exterior Equipment - Energy Use (kBtu)", "ext_equip_kbtu", "#,##0", C_ORANGE],
+            ["Fans - Electricity Energy Use (kBtu)", "fans_kbtu", "#,##0", C_ORANGE],
+            ["Pumps - Electricity Energy Use (kBtu)", "pumps_kbtu", "#,##0", C_ORANGE],
+            ["Heat Rejection - Electricity Energy Use (kBtu)", "heat_reject_kbtu", "#,##0", C_ORANGE],
+            ["Humidification - Electricity Energy Use (kBtu)", "humid_elec_kbtu", "#,##0", C_ORANGE],
+            ["Heat Recovery - Electricity Energy Use (kBtu)", "heat_recov_kbtu", "#,##0", C_ORANGE],
+            ["Water Systems - Electricity Energy Use (kBtu)", "water_sys_elec_kbtu", "#,##0", C_ORANGE],
+            ["Water Systems - Gas Energy Use (kBtu)", "water_sys_gas_kbtu", "#,##0", C_ORANGE],
+            ["Water Systems - Additional Fuel Energy Use (kBtu)", "water_sys_add_kbtu", "#,##0", C_ORANGE],
+            ["Water Systems - District Heating Energy Use (kBtu)", "water_sys_dist_kbtu", "#,##0", C_ORANGE],
+            ["Refrigeration - Electricity Energy Use (kBtu)", "refrig_kbtu", "#,##0", C_ORANGE],
+            ["Generators  Electricity Energy Use (kBtu)", "gen_kbtu", "#,##0", C_ORANGE],   // intentional double-space
+            ["Misc 1 -  Electricity Energy Use (kBtu)", "misc1_kbtu", "#,##0", C_ORANGE],   // intentional double-space
+            ["Misc 2 -  Electricity Energy Use (kBtu)", "misc2_kbtu", "#,##0", C_ORANGE],   // intentional double-space
+            ["Total Water Use (kGal)", "total_water_kgal", "#,##0.0", C_PURPLE],
+            ["Water Use Intensity (kGal/ft\u00b2)", "water_use_intensity", "0.000", C_PURPLE],
+            ["Heat Rejection - Water Use (kGal)", "hr_water_kgal", "#,##0.0", C_PURPLE],
+            ["Humidificatopn - Water Use (kGal)", "humid_water_kgal", "#,##0.0", C_PURPLE],  // intentional typo "Humidificatopn"
+            ["Water System - Water Use (kGal)", "ws_water_kgal", "#,##0.0", C_PURPLE],
+            ["Total Energy Cost ($)", "total_cost", '"$"#,##0.00', C_GRAY],
+            ["Energy Cost Intensity ($/ft\u00b2)", "cost_intensity", '"$"#,##0.00', C_GRAY],
+            ["Electricity Virtual Rate ($/kBtu)", "elec_rate_per_kbtu", "0.0000", C_GRAY],
+            ["Gas Virtual Rate ($/kBtu)", "gas_rate_per_kbtu", "0.0000", C_GRAY],
+            ["Additional Fuel Virtual Rate ($/kBtu)", "add_fuel_rate_per_kbtu", "0.0000", C_GRAY],
+            ["District Cooling Virtual Rate ($/kBtu)", "dc_rate_per_kbtu", "0.0000", C_GRAY],
+            ["District Heating Virtual Rate ($/kBtu)", "dh_rate_per_kbtu", "0.0000", C_GRAY],
+            ["Total Carbon Emissions (kg CO2e)", "total_carbon_kg", "#,##0", C_GRAY],
+            ["Carbon Emission Intensity (kg CO2e/ft\u00b2)", "carbon_intensity", "0.000", C_GRAY],
+            ["Electricity Virtual Rate (kg CO2e/kBtu)", "elec_carbon_rate", "0.0000", C_GRAY],
+            ["Gas Virtual Rate (kg CO2e/kBtu)", "gas_carbon_rate", "0.0000", C_GRAY],
+            ["Additional Fuel Virtual Rate (kg CO2e/kBtu)", "add_fuel_carbon_rate", "0.0000", C_GRAY],
+            ["District Cooling Virtual Rate (kg CO2e/kBtu)", "dc_carbon_rate", "0.0000", C_GRAY],
+            ["District Heating Virtual Rate (kg CO2e/kBtu)", "dh_carbon_rate", "0.0000", C_GRAY],
+            ["Peak Heating (kBtuh)", "peak_heating_kbtuh", "#,##0.0", C_TEAL],
+            ["Peak Heating (Btuh/ft\u00b2)", "peak_heating_btuh_ft2", "#,##0.0", C_TEAL],
+            ["Peak Heating Hour", "peak_heating_time", "@", C_TEAL],
+            ["Peak Cooling (kBtuh)", "peak_cooling_kbtuh", "#,##0.0", C_TEAL],
+            ["Peak Cooling (Btuh/ft\u00b2)", "peak_cooling_btuh_ft2", "#,##0.0", C_TEAL],
+            ["Peak Cooling Hour", "peak_cooling_time", "@", C_TEAL],
+            ["Peak Electrical Load (W)", "peak_elec_w", "#,##0", C_TEAL],
+            ["Peak Electrical Load Intensity (W/ft\u00b2)", "peak_elec_w_per_ft2", "#,##0.0", C_TEAL],
+            ["Peak Electricity Hour", "peak_elec_time", "@", C_TEAL],
+            ["Conditioned Floor Area (ft\u00b2)", "conditioned_floor_area", "#,##0", C_LIME],
+            ["Total Floor Area (ft\u00b2)", "total_floor_area", "#,##0", C_LIME],
+            ["Gross Wall Area (ft\u00b2)", "gross_wall_area", "#,##0", C_LIME],
+            ["Above Ground Gross Wall Area (ft\u00b2)", "above_ground_wall_area", "#,##0", C_LIME],
+            ["Above Ground North Wall Area (ft\u00b2)", "north_wall_area", "#,##0", C_LIME],
+            ["Above Ground East Wall Area (ft\u00b2)", "east_wall_area", "#,##0", C_LIME],
+            ["Above Ground South Wall Area (ft\u00b2)", "south_wall_area", "#,##0", C_LIME],
+            ["Above Ground East Wall Area (ft\u00b2)", "west_wall_area", "#,##0", C_LIME],  // intentional duplicate label (col 74 in source)
+            ["North WWR Nominal (%)", "north_wwr_nominal", "0.0", C_LIME],
+            ["East WWR Nominal (%)", "east_wwr_nominal", "0.0", C_LIME],
+            ["South WWR Nominal (%)", "south_wwr_nominal", "0.0", C_LIME],
+            ["West WWR Nominal (%)", "west_wwr_nominal", "0.0", C_LIME],
+            ["Building WWR Actual (%)", "building_wwr", "0.0", C_LIME],
+            ["North WWR Actual (%)", "north_wwr_actual", "0.0", C_LIME],
+            ["East WWR Actual (%)", "east_wwr_actual", "0.0", C_LIME],
+            ["South WWR Actual (%)", "south_wwr_actual", "0.0", C_LIME],
+            ["West WWR Actual (%)", "west_wwr_actual", "0.0", C_LIME],
+            ["Gross Roof Area (ft\u00b2)", "gross_roof_area", "#,##0", C_LIME],
+            ["Skylight Roof Ratio (%)", "skylight_ratio", "0.0", C_LIME],
+            ["Exterior Wall to Floor Area Ratio", "wall_to_floor_ratio", "0.000", C_LIME],
+            ["Exterior Roof to Floor Area Ratio", "roof_to_floor_ratio", "0.000", C_LIME],
+            ["Exterior Envelope to Floor Area Ratio", "envelope_to_floor_ratio", "0.000", C_LIME],
+            ["North Shading Type", "north_shading_type", "@", C_LIME],
+            ["North Shading Ratio (%)", "north_shading_ratio", "0.0", C_LIME],
+            ["West Shading Type", "west_shading_type", "@", C_LIME],
+            ["West Shading Ratio (%)", "west_shading_ratio", "0.0", C_LIME],
+            ["South Shading Type", "south_shading_type", "@", C_LIME],
+            ["South Shading Ratio (%)", "south_shading_ratio", "0.0", C_LIME],
+            ["East Shading Type", "east_shading_type", "@", C_LIME],
+            ["East Shading Ratio (%)", "east_shading_ratio", "0.0", C_LIME],
+            ["Vertical Weighted U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "vert_weighted_u", "0.000", C_RED],
+            ["Vertical Weighted R-Value (ft\u00b2\u00b7h\u00b7F/Btu )", "vert_weighted_r", "0.00", C_RED],  // trailing space preserved
+            ["Wall U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "wall_u_value", "0.000", C_RED],
+            ["Wall 2 U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "wall2_u_value", "0.000", C_RED],
+            ["Roof U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "roof_u_value", "0.000", C_RED],
+            ["Exposed Floor U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "exposed_floor_u_value", "0.000", C_RED],
+            ["Slab on Grade U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "slab_u_value", "0.000", C_RED],
+            ["Assembly U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "assembly_u_value", "0.000", C_RED],
+            ["Glass U-Value (Btu/h\u00b7ft\u00b2\u00b7F)", "glass_u_value", "0.000", C_RED],
+            ["Glass SHGC", "glass_shgc", "0.000", C_RED],
+            ["Glass VLT", "glass_vlt", "0.000", C_RED],
+            ["Glass LSG", "glass_lsg", "0.00", C_RED],
+            ["Infiltration Rate (CFM/ft\u00b2 facade)", "infil_cfm_ft2", "0.000", C_RED],
+            ["Lighting Power Density (W/ft\u00b2)", "lpd_total_w_ft2", "0.00", C_LIME],
+            ["Conditioned Lighting Power Density (W/ft\u00b2)", "lpd_w_ft2", "0.00", C_LIME],
+            ["Occupant Density (ft\u00b2/person)", "occ_density_ft2_person", "#,##0.0", C_LIME],
+            ["Conditioned Occupant Density (ft\u00b2/person)", "cond_occ_density_ft2_person", "#,##0.0", C_LIME],
+            ["Equipment Power Density (W/ft\u00b2)", "epd_total_w_ft2", "0.00", C_LIME],
+            ["Conditioned Equipment Power Density (W/ft\u00b2)", "epd_w_ft2", "0.00", C_LIME],
+            ["Total Ventilation Air Flow Rate (CFM)", "total_supply_cfm", "#,##0", C_RED],
+            ["Ventilation Air Flow Rate per Area (CFM/ft\u00b2)", "vent_cfm_per_ft2", "0.000", C_RED],
+            ["Total Heating Airflow Rate (CFM)", "total_htg_cfm", "#,##0", C_RED],
+            ["Heating Airflow Rate per Area (CFM/ft\u00b2)", "htg_cfm_per_ft2", "0.000", C_RED],
+            ["Total Cooling Airflow Rate (CFM)", "total_clg_cfm", "#,##0", C_RED],
+            ["Cooling Airflow Rate per Area (CFM/ft\u00b2)", "clg_cfm_per_ft2", "0.000", C_RED],
+            ["Chiller Efficiency (COP)", "chiller_cop", "0.00", C_RED],
+            ["Boiler Efficiency (COP)", "boiler_cop", "0.00", C_RED],
+            ["DX Cooling Efficiency (COP)", "dx_cooling_cop", "0.00", C_RED],
+            ["DX Heating Efficiency (HSPF)", "dx_heating_cop", "0.00", C_RED],
+            ["Heat Pump Cooling Efficiency (COP)", "hp_cooling_cop", "0.00", C_RED],
+            ["Heat Pump Heating Efficiency (COP)", "hp_heating_cop", "0.00", C_RED],
+            ["Total Fan Power (kW)", "total_fan_kw", "0.00", C_RED],
+            ["Total Pump Power (kW)", "total_pump_kw", "0.00", C_RED],
+            ["Service Hot Water Thermal Efficiency (COP)", "dhw_efficiency", "0.00", C_RED],
+            ["Exterior Lighting (kW)", "ext_lighting_kw", "0.00", C_RED],
+        ];
 
-      if (in_w && s && !s.startsWith("WINDOW") && !s.startsWith("GLASS")) {
-        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
-        if (m) {
-          const mult = parseFloat(m[2]);
-          const area = parseFloat(m[3]) * mult;
-          const u = parseFloat(m[8]);
-          const sc = parseFloat(m[9]);
-          const vlt = parseFloat(m[10]);
-          const shgc = sc * 0.87;
-          const lsg = shgc > 0 ? vlt/shgc : 0;
-          r.window_data.push({area, u_value:u, sc, shgc, vlt, lsg});
-          continue;
+        /* ============================================================
+         *  ROW ENRICHMENT
+         * ============================================================ */
+        function enrichRow(data, rates) {
+            const elec_kbtu = data.electricity_kbtu || 0, gas_kbtu = data.gas_kbtu || 0;
+            const total_area = data.total_floor_area || 1;
+            const elec_rate = data.inp_elec_rate_per_kbtu || rates.electricity_per_kbtu || 0;
+            const gas_rate = data.inp_gas_rate_per_kbtu || rates.gas_per_kbtu || 0;
+            const elec_carbon = rates.elec_carbon_kg_per_kbtu || 0, gas_carbon = rates.gas_carbon_kg_per_kbtu || 0;
+            const total_cost = elec_kbtu * elec_rate + gas_kbtu * gas_rate;
+            const cost_intensity = total_area > 0 ? total_cost / total_area : 0;
+            const total_carbon = elec_kbtu * elec_carbon + gas_kbtu * gas_carbon;
+            const carbon_intensity = total_area > 0 ? total_carbon / total_area : 0;
+            const win_area = data.total_window_area || 0, wall_area = data.total_wall_area || 0;
+            const glass_u = data.glass_u_value || 0, wall_u = data.wall_u_value || 0;
+            const opaque = wall_area - win_area;
+            const vert_u = (win_area + opaque) > 0 ? (glass_u * win_area + wall_u * opaque) / (win_area + opaque) : wall_u;
+            const vert_r = vert_u > 0 ? 1 / vert_u : 0;
+            const extra = {
+                total_cost, cost_intensity,
+                elec_rate_per_kbtu: elec_rate, gas_rate_per_kbtu: gas_rate,
+                add_fuel_rate_per_kbtu: 0, dc_rate_per_kbtu: 0, dh_rate_per_kbtu: 0,
+                total_carbon_kg: total_carbon, carbon_intensity,
+                elec_carbon_rate: elec_carbon, gas_carbon_rate: gas_carbon,
+                add_fuel_carbon_rate: 0, dc_carbon_rate: 0, dh_carbon_rate: 0,
+                vert_weighted_u: vert_u, vert_weighted_r: vert_r,
+                additional_fuel_kbtu: 0, district_cooling_kbtu: 0, district_heating_kbtu: 0,
+                htg_add_fuel_kbtu: 0, htg_dist_htg_kbtu: 0, clg_dist_kbtu: 0,
+                int_equip_gas_kbtu: 0, int_equip_add_kbtu: 0, ext_equip_kbtu: 0,
+                humid_elec_kbtu: 0, heat_recov_kbtu: 0, water_sys_add_kbtu: 0, water_sys_dist_kbtu: 0,
+                refrig_kbtu: 0, gen_kbtu: 0, misc1_kbtu: 0, misc2_kbtu: 0,
+                total_water_kgal: 0, water_use_intensity: 0, hr_water_kgal: 0, humid_water_kgal: 0, ws_water_kgal: 0,
+                gross_wall_area: wall_area, above_ground_wall_area: wall_area,
+                north_wall_area: 0, east_wall_area: 0, south_wall_area: 0, west_wall_area: 0,
+                north_wwr_nominal: 0, east_wwr_nominal: 0, south_wwr_nominal: 0, west_wwr_nominal: 0,
+                north_wwr_actual: 0, east_wwr_actual: 0, south_wwr_actual: 0, west_wwr_actual: 0,
+                gross_roof_area: 0, skylight_ratio: 0,
+                wall_to_floor_ratio: 0, roof_to_floor_ratio: 0, envelope_to_floor_ratio: 0,
+                north_shading_type: data.inp_n_shading_type || "", north_shading_ratio: data.inp_n_shading_ratio || 0,
+                west_shading_type: data.inp_w_shading_type || "", west_shading_ratio: data.inp_w_shading_ratio || 0,
+                south_shading_type: data.inp_s_shading_type || "", south_shading_ratio: data.inp_s_shading_ratio || 0,
+                east_shading_type: data.inp_e_shading_type || "", east_shading_ratio: data.inp_e_shading_ratio || 0,
+                wall2_u_value: 0, roof_u_value: 0, exposed_floor_u_value: 0, assembly_u_value: 0, infil_cfm_ft2: 0,
+                total_htg_cfm: 0, htg_cfm_per_ft2: 0,
+                total_clg_cfm: data.total_supply_cfm || 0, clg_cfm_per_ft2: data.vent_cfm_per_ft2 || 0,
+                chiller_cop: 0, boiler_cop: 0, hp_cooling_cop: 0, hp_heating_cop: 0, total_pump_kw: 0,
+            };
+            const merged = { ...extra, ...data };
+            for (const k of ["total_cost", "cost_intensity", "elec_rate_per_kbtu", "gas_rate_per_kbtu",
+                "total_carbon_kg", "carbon_intensity", "vert_weighted_u", "vert_weighted_r",
+                "north_shading_type", "north_shading_ratio", "west_shading_type", "west_shading_ratio",
+                "south_shading_type", "south_shading_ratio", "east_shading_type", "east_shading_ratio",
+                "total_clg_cfm", "clg_cfm_per_ft2", "gross_wall_area", "above_ground_wall_area"]) {
+                merged[k] = extra[k];
+            }
+            return merged;
         }
-      }
-      if (in_es && s && !s.startsWith("SURFACE")) {
-        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+(\S.+?)\s+([\d.]+)\s+(DELAYED|QUICK)\s*/);
-        if (m) {
-          const area = parseFloat(m[3]) * parseFloat(m[2]);
-          r.ext_wall_data.push({area, u_value: parseFloat(m[5])});
-          continue;
+
+        /* ============================================================
+         *  WORKBOOK BUILDER  — Sheet names match Excel: BL Data / Proposed Data
+         * ============================================================ */
+        function buildWorkbook(blRows, propRows, rates) {
+            const wb = XLSX.utils.book_new();
+            for (const [name, rows] of [["BL Data", blRows], ["Proposed Data", propRows]]) {
+                XLSX.utils.book_append_sheet(wb, buildSheet(rows, rates), name);
+            }
+            return wb;
         }
-      }
-      if (in_ug && s && !s.startsWith("SURFACE")) {
-        const m = line.match(/^\s+(\S.+?)\s+([\d.]+)\s+([\d.]+)\s+(\S.+?)\s+([\d.]+)\s*$/);
-        if (m) {
-          const area = parseFloat(m[3]) * parseFloat(m[2]);
-          r.underground_data.push({area, u_value: parseFloat(m[5])});
+
+        function buildSheet(rows, rates) {
+            const aoa = [];
+            aoa.push(COLUMNS.map(c => c[0]));
+            for (const row of rows) {
+                const merged = enrichRow(row, rates);
+                aoa.push(COLUMNS.map(([, key, fmt]) => {
+                    let v = merged[key];
+                    if (v === undefined || v === null) v = fmt === "@" ? "" : 0;
+                    return v;
+                }));
+            }
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+            const hStyle = (color) => ({
+                font: { bold: true, color: { rgb: "FFFFFF" }, sz: 9, name: "Calibri" },
+                fill: { patternType: "solid", fgColor: { rgb: color } },
+                alignment: { wrapText: true, vertical: "center", horizontal: "center" },
+                border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } },
+            });
+            const dStyle = (fmt) => ({
+                alignment: { horizontal: fmt === "@" ? "left" : "right", vertical: "center" },
+                border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } },
+            });
+
+            const colWidths = [];
+            for (let c = 0; c < COLUMNS.length; c++) {
+                const [hdr, , fmt, color] = COLUMNS[c];
+                const addr = XLSX.utils.encode_cell({ r: 0, c });
+                if (ws[addr]) ws[addr].s = hStyle(color);
+                let maxLen = hdr.length;
+                for (let r = 1; r < aoa.length; r++) {
+                    const ca = XLSX.utils.encode_cell({ r, c });
+                    const cell = ws[ca];
+                    if (!cell) continue;
+                    cell.s = dStyle(fmt);
+                    if (fmt !== "@") cell.z = fmt;
+                    const sv = cell.v === null || cell.v === undefined ? "" : String(cell.v);
+                    if (sv.length > maxLen) maxLen = sv.length;
+                }
+                colWidths.push({ wch: Math.min(Math.max(maxLen + 2, 12), 40) });
+            }
+            ws["!cols"] = colWidths;
+            ws["!rows"] = [{ hpx: 60 }];
+            ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: COLUMNS.length - 1 } });
+            return ws;
         }
-      }
-    }
 
-    const sumA = arr => arr.reduce((a,b)=>a+b.area, 0);
-    const wAvg = (arr, key) => {
-      const t = sumA(arr);
-      return t > 0 ? arr.reduce((a,b)=>a + b[key]*b.area, 0) / t : 0;
-    };
-    const tw = sumA(r.window_data);
-    r.total_window_area = tw;
-    if (tw > 0) {
-      r.glass_u_value = wAvg(r.window_data, "u_value");
-      r.glass_shgc = wAvg(r.window_data, "shgc");
-      r.glass_vlt = wAvg(r.window_data, "vlt");
-      r.glass_lsg = r.glass_shgc > 0 ? r.glass_vlt / r.glass_shgc : 0;
-    } else {
-      r.glass_u_value=0; r.glass_shgc=0; r.glass_vlt=0; r.glass_lsg=0;
-    }
-    const tww = sumA(r.ext_wall_data);
-    r.total_wall_area = tww;
-    r.wall_u_value = tww > 0 ? wAvg(r.ext_wall_data, "u_value") : 0;
-    const tug = sumA(r.underground_data);
-    r.slab_u_value = tug > 0 ? wAvg(r.underground_data, "u_value") : 0;
-  }
-
-  _sva() {
-    const r = this.r;
-    Object.assign(r, {total_supply_cfm:0, total_oa_cfm:0, total_fan_kw:0, cooling_eir_list:[], heating_eir_list:[]});
-    let in_sva = false;
-    for (const line of this.lines) {
-      if (line.includes("REPORT- SV-A")) { in_sva=true; continue; }
-      if (!in_sva) continue;
-      if (/^REPORT-\s/.test(line) && !line.includes("SV-A")) { in_sva=false; continue; }
-      const s = line.trim();
-      if (/^SUPPLY\s+[\d.]+/.test(s)) {
-        const n = floats(s.replace("SUPPLY",""));
-        if (n.length) {
-          r.total_supply_cfm += n[0];
-          if (n.length >= 3) r.total_fan_kw += n[2];
+        /* ============================================================
+         *  PROCESSING PIPELINE
+         * ============================================================ */
+        async function processRun(simFile, inpFile, label, climateZone) {
+            logLine(`<span class="dim">  ↳ SIM:</span> <span class="info">${simFile.name}</span> <span class="dim">(${(simFile.size / 1024).toFixed(0)} KB)</span>`);
+            const simText = await readFileText(simFile);
+            const r = new SIMParser(simText, simFile.name).parse();
+            r.option_name = label || simFile.name.replace(/\.[Ss][Ii][Mm]$/, "");
+            r.results_path = simFile.name;
+            r.climate_zone = climateZone || "";
+            if (inpFile) {
+                logLine(`<span class="dim">  ↳ INP:</span> <span class="info">${inpFile.name}</span> <span class="dim">(${(inpFile.size / 1024).toFixed(0)} KB)</span>`);
+                try {
+                    const inpText = await readFileText(inpFile);
+                    Object.assign(r, new INPParser(inpText, inpFile.name).parse());
+                    r.inp_file = inpFile.name;
+                } catch (e) {
+                    logLine(`<span class="warn">  ⚠ inp parse failed: ${e.message}</span>`);
+                }
+            }
+            return r;
         }
-        continue;
-      }
-      if (/^(PSZ|PVAVS?|VAVS?|FPFC?|SZRH|PTAC|PTHP|HVSYS)\s/.test(s)) {
-        const n = floats(s);
-        if (n.length >= 10) {
-          const ce = n[7], he = n[8];
-          if (ce > 0) r.cooling_eir_list.push(1/ce);
-          if (he > 0) r.heating_eir_list.push(1/he);
+
+        async function run() {
+            if (!state.blSim.length && !state.propSim.length) { toast("Drop at least one .SIM file"); return; }
+            const btn = $("#runBtn");
+            btn.disabled = true;
+            $("#status").textContent = "Working…";
+            $("#spinner").classList.add("visible");
+            logClear();
+            const option = $("#optionLabel").value.trim();
+            const cz = $("#climateZone").value;
+            const out = $("#outputName").value.trim() || "energy_results.xlsx";
+            const autoPair = $("#autoPair").checked;
+            const pair = (sims, inps) => sims.map((s, i) => autoPair && inps[i] ? [s, inps[i]] : [s, null]);
+            try {
+                const blRows = [];
+                if (state.blSim.length) {
+                    logLine(`<span class="ok">▶ Baseline runs (${state.blSim.length})</span>`);
+                    for (const [i, [s, inp]] of pair(state.blSim, state.blInp).entries()) {
+                        blRows.push(await processRun(s, inp, state.blSim.length > 1 ? `${option} BL ${i + 1}` : option, cz));
+                    }
+                }
+                const propRows = [];
+                if (state.propSim.length) {
+                    logLine(`<span class="ok">▶ Proposed runs (${state.propSim.length})</span>`);
+                    for (const [i, [s, inp]] of pair(state.propSim, state.propInp).entries()) {
+                        propRows.push(await processRun(s, inp, state.propSim.length > 1 ? `${option} Prop ${i + 1}` : option, cz));
+                    }
+                }
+                logLine(`<span class="ok">▶ Building workbook…</span>`);
+                const wb = buildWorkbook(blRows, propRows, {});
+                XLSX.writeFile(wb, out, { bookType: "xlsx", cellStyles: true });
+                logLine(`<span class="ok">✓ Saved → ${out}</span>`);
+                if (blRows.length) {
+                    const r = blRows[0];
+                    const fmt = (n, d = 0) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+                    logLine(`\n<span class="dim">─── BL Run 1 summary ─────────────────</span>`);
+                    logLine(`  Project:           ${r.project_name || ""}`);
+                    logLine(`  Weather:           ${r.weather_file || ""}`);
+                    logLine(`  Total area (ft²):  ${fmt(r.total_floor_area)}`);
+                    logLine(`  Total kBtu:        ${fmt(r.total_energy_kbtu)}`);
+                    logLine(`  EUI (kBtu/ft²):    ${fmt(r.eui_kbtu_ft2, 1)}`);
+                    logLine(`  Peak cooling:      ${fmt(r.peak_cooling_kbtuh, 1)} kBtuh`);
+                    logLine(`  Peak heating:      ${fmt(r.peak_heating_kbtuh, 1)} kBtuh`);
+                    logLine(`  Glass U / SHGC:    ${fmt(r.glass_u_value, 3)} / ${fmt(r.glass_shgc, 3)}`);
+                    if (r.inp_file) {
+                        logLine(`  Elec ($/kWh):      ${r.inp_elec_rate_per_kwh ?? '—'}`);
+                        logLine(`  Gas ($/therm):     ${r.inp_gas_rate_per_therm ?? '—'}`);
+                    }
+                }
+                toast("✓ Excel downloaded");
+            } catch (e) {
+                console.error(e);
+                logLine(`<span class="err">✗ ERROR: ${e.message}</span>`);
+                toast("Error — see log");
+            } finally {
+                btn.disabled = false;
+                $("#status").textContent = "";
+                $("#spinner").classList.remove("visible");
+                updateBtn();
+            }
         }
-        continue;
-      }
-      const zm = line.match(/^(.+?)\s+([\d.]+)\.\s+([\d.]+)\.\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\./);
-      if (zm) {
-        r.total_oa_cfm += parseFloat(zm[6]);
-      }
-    }
-    r.dx_cooling_cop = r.cooling_eir_list.length ? r.cooling_eir_list.reduce((a,b)=>a+b,0)/r.cooling_eir_list.length : 0;
-    r.dx_heating_cop = r.heating_eir_list.length ? r.heating_eir_list.reduce((a,b)=>a+b,0)/r.heating_eir_list.length : 0;
-  }
 
-  _derived() {
-    const r = this.r;
-    const KWH_TO_KBTU = 3.412, THERM_TO_KBTU = 100, MBTU_TO_KBTU = 1000;
-    r.electricity_kbtu = r.kwh_annual * KWH_TO_KBTU;
-    r.gas_kbtu = r.therm_annual * THERM_TO_KBTU;
-    r.int_lighting_kbtu = r.ps_e_lights_kwh * KWH_TO_KBTU;
-    r.int_equip_kbtu = r.ps_e_misc_kwh * KWH_TO_KBTU;
-    r.htg_elec_kbtu = r.ps_e_htg_kwh * KWH_TO_KBTU;
-    r.clg_elec_kbtu = r.ps_e_clg_kwh * KWH_TO_KBTU;
-    r.heat_reject_kbtu = r.ps_e_heat_reject_kwh * KWH_TO_KBTU;
-    r.pumps_kbtu = r.ps_e_pumps_kwh * KWH_TO_KBTU;
-    r.fans_kbtu = r.ps_e_fans_kwh * KWH_TO_KBTU;
-    r.water_sys_elec_kbtu = r.ps_e_dhw_kwh * KWH_TO_KBTU;
-    r.ext_lighting_kbtu = r.ps_e_ext_kwh * KWH_TO_KBTU;
-    r.htg_gas_kbtu = r.ps_e_htg_mbtu * MBTU_TO_KBTU;
-    r.water_sys_gas_kbtu = r.ps_e_dhw_mbtu * MBTU_TO_KBTU;
-    r.total_energy_kbtu = r.electricity_kbtu + r.gas_kbtu;
-
-    const total_area = r.total_area || 0;
-    let cond = r.conditioned_area || 0;
-    if (cond === 0) cond = total_area;
-    r.conditioned_floor_area = cond;
-    r.total_floor_area = total_area;
-    const ref = total_area > 0 ? total_area : 1;
-    r.eui_kbtu_ft2 = r.total_energy_kbtu / ref;
-    r.peak_elec_w = (r.peak_elec_kw || r.max_kw || 0) * 1000;
-    r.peak_elec_w_per_ft2 = r.peak_elec_w / ref;
-    r.peak_cooling_btuh_ft2 = (r.peak_cooling_kbtuh || 0) * 1000 / ref;
-    r.peak_heating_btuh_ft2 = (r.peak_heating_kbtuh || 0) * 1000 / ref;
-    const cref = cond > 0 ? cond : 1;
-    r.lpd_w_ft2 = (r.lpd_sum || 0) / cref;
-    r.epd_w_ft2 = (r.epd_sum || 0) / cref;
-    r.lpd_total_w_ft2 = (r.lpd_sum || 0) / ref;
-    r.epd_total_w_ft2 = (r.epd_sum || 0) / ref;
-    r.occ_density_ft2_person = r.total_people > 0 ? total_area / r.total_people : 0;
-    r.cond_occ_density_ft2_person = r.conditioned_people > 0 ? cond / r.conditioned_people : 0;
-    r.building_wwr = r.total_wall_area > 0 ? (r.total_window_area / r.total_wall_area * 100) : 0;
-    r.wall_r_value = r.wall_u_value > 0 ? 1/r.wall_u_value : 0;
-    r.vent_cfm_per_ft2 = ref > 0 ? r.total_supply_cfm / ref : 0;
-    r.dhw_efficiency = 0;
-    r.ext_lighting_kw = 0;
-  }
-}
-
-/* ============================================================
- *  INP PARSER  (port of inp_parser.py)
- * ============================================================ */
-const HDR_RE = /^\s*"([^"]+)"\s*=\s*([A-Z][A-Z0-9\-]+)\s*$/;
-const BARE_HDR_RE = /^\s*([A-Z][A-Z0-9\-]+)\s*$/;
-const PROP_RE = /^\s*([A-Z][A-Z0-9\-]+)\s*=\s*(.+?)\s*$/;
-
-function azimuthToFacade(az) {
-  az = ((az % 360) + 360) % 360;
-  if (az < 45 || az >= 315) return "N";
-  if (az < 135) return "E";
-  if (az < 225) return "S";
-  return "W";
-}
-
-function cleanValue(v) {
-  v = v.trim();
-  if (v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1);
-  if (v.startsWith("(") && v.endsWith(")")) {
-    const inner = v.slice(1, -1).trim();
-    return inner.split(",").map(x => {
-      x = x.trim().replace(/^"|"$/g, "");
-      const n = parseFloat(x);
-      return !isNaN(n) && /^-?\d+\.?\d*$/.test(x) ? n : x;
-    });
-  }
-  const n = parseFloat(v);
-  if (!isNaN(n) && /^-?\d+\.?\d*([eE][-+]?\d+)?$/.test(v)) return n;
-  return v;
-}
-
-class INPParser {
-  constructor(text, name) {
-    this.text = text;
-    this.name = name;
-    this.blocks = [];
-    this.byType = {};
-    this.byName = {};
-  }
-
-  parse() {
-    if (!this.text) return {};
-    this._parseBlocks();
-    return {
-      ...this._extractProject(),
-      ...this._extractSite(),
-      ...this._extractMeters(),
-      ...this._extractRates(),
-      ...this._extractGlass(),
-      ...this._extractShading(),
-    };
-  }
-
-  _parseBlocks() {
-    let name = null, otype = null, props = {}, inBlock = false;
-    const commit = () => {
-      if (otype !== null) {
-        this.blocks.push([name, otype, props]);
-        if (!this.byType[otype]) this.byType[otype] = [];
-        this.byType[otype].push([name, props]);
-        if (name) this.byName[name] = [otype, props];
-      }
-      name = null; otype = null; props = {}; inBlock = false;
-    };
-
-    for (let raw of this.text.split(/\r?\n/)) {
-      let line = raw.replace(/\s+$/, "");
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("$")) continue;
-      if (trimmed === "..") { commit(); continue; }
-      if (line.replace(/\s+$/, "").endsWith("..")) {
-        line = line.slice(0, line.lastIndexOf("..")).replace(/\s+$/, "");
-      }
-      let m = line.match(HDR_RE);
-      if (m) {
-        if (inBlock) commit();
-        name = m[1]; otype = m[2]; props = {}; inBlock = true;
-        continue;
-      }
-      m = line.match(BARE_HDR_RE);
-      if (m && !inBlock) {
-        otype = m[1]; name = null; props = {}; inBlock = true;
-        continue;
-      }
-      m = line.match(PROP_RE);
-      if (m && inBlock) {
-        props[m[1]] = cleanValue(m[2]);
-      }
-    }
-    commit();
-  }
-
-  _extractProject() {
-    const out = {inp_title:"", inp_run_period:"", inp_holidays:""};
-    for (const [, props] of (this.byType.TITLE || [])) {
-      if (props["LINE-1"]) { out.inp_title = String(props["LINE-1"]).replace(/\*/g,""); break; }
-    }
-    for (const [, props] of (this.byType["RUN-PERIOD-PD"] || [])) {
-      const bm=props["BEGIN-MONTH"], bd=props["BEGIN-DAY"], by=props["BEGIN-YEAR"];
-      const em=props["END-MONTH"], ed=props["END-DAY"], ey=props["END-YEAR"];
-      if (bm && em) out.inp_run_period = `${bm}/${bd}/${by} – ${em}/${ed}/${ey}`;
-      break;
-    }
-    for (const [n] of (this.byType.HOLIDAYS || [])) {
-      if (n) { out.inp_holidays = n; break; }
-    }
-    return out;
-  }
-
-  _extractSite() {
-    const out = {inp_altitude_ft:null, inp_building_azimuth:null};
-    for (const [, props] of (this.byType["SITE-PARAMETERS"] || [])) {
-      if (props.ALTITUDE !== undefined) out.inp_altitude_ft = props.ALTITUDE;
-      if (props.LATITUDE !== undefined) out.inp_latitude = props.LATITUDE;
-      if (props.LONGITUDE !== undefined) out.inp_longitude = props.LONGITUDE;
-      break;
-    }
-    for (const [, props] of (this.byType["BUILD-PARAMETERS"] || [])) {
-      if (props.AZIMUTH !== undefined) out.inp_building_azimuth = props.AZIMUTH;
-      break;
-    }
-    return out;
-  }
-
-  _extractMeters() {
-    const out = {inp_master_elec_meter:"", inp_master_fuel_meter:""};
-    for (const [, props] of (this.byType["MASTER-METERS"] || [])) {
-      out.inp_master_elec_meter = props["MSTR-ELEC-METER"] || "";
-      out.inp_master_fuel_meter = props["MSTR-FUEL-METER"] || "";
-      break;
-    }
-    return out;
-  }
-
-  _extractRates() {
-    const out = {
-      inp_elec_rate_per_kwh:null, inp_elec_rate_per_kbtu:null,
-      inp_gas_rate_per_therm:null, inp_gas_rate_per_kbtu:null,
-      inp_elec_monthly_chg:0, inp_gas_monthly_chg:0, inp_utility_rates:[],
-    };
-    for (const [name, props] of (this.byType["UTILITY-RATE"] || [])) {
-      const fuel = String(props.TYPE || "").toUpperCase();
-      let monthly = props["MONTH-CHGS"] || 0;
-      if (Array.isArray(monthly)) monthly = monthly.filter(x=>typeof x==="number").reduce((a,b)=>a+b, 0);
-      let refs = props["BLOCK-CHARGES"] || [];
-      if (typeof refs === "string") refs = [refs];
-      let tier1 = 0;
-      for (const ref of refs) {
-        if (this.byName[ref]) {
-          const bprops = this.byName[ref][1];
-          let costs = bprops["COSTS-1"];
-          if (Array.isArray(costs) && costs.length) tier1 += parseFloat(costs[0]) || 0;
-          else if (typeof costs === "number") tier1 += costs;
+        /* ============================================================
+         *  UI WIRING
+         * ============================================================ */
+        function getChipClass(key) {
+            return key.startsWith("bl") ? "chip chip-bl" : "chip chip-prop";
         }
-      }
-      out.inp_utility_rates.push({name, fuel, monthly_charge:monthly, tier1_cost:tier1});
-      if (fuel.includes("ELEC")) {
-        out.inp_elec_rate_per_kwh = tier1;
-        out.inp_elec_rate_per_kbtu = tier1 ? tier1/3.412 : null;
-        out.inp_elec_monthly_chg += parseFloat(monthly) || 0;
-      } else if (fuel.includes("GAS") || fuel === "NATURAL-GAS") {
-        out.inp_gas_rate_per_therm = tier1;
-        out.inp_gas_rate_per_kbtu = tier1 ? tier1/100 : null;
-        out.inp_gas_monthly_chg += parseFloat(monthly) || 0;
-      }
-    }
-    return out;
-  }
-
-  _extractGlass() {
-    const codes = [], names = [];
-    for (const [name, props] of (this.byType["GLASS-TYPE"] || [])) {
-      names.push(name);
-      const code = props["GLASS-TYPE-CODE"];
-      if (code) codes.push(String(code));
-    }
-    return {
-      inp_glass_type_names: names,
-      inp_glass_type_codes: codes,
-      inp_glass_type_code_list: codes.join(", "),
-    };
-  }
-
-  _extractShading() {
-    let bldgAz = 0;
-    for (const [, props] of (this.byType["BUILD-PARAMETERS"] || [])) {
-      bldgAz = parseFloat(props.AZIMUTH || 0) || 0; break;
-    }
-
-    let curWallAz = null;
-    const facades = {N:{w:0,s:0,o:0,f:0,d:0}, E:{w:0,s:0,o:0,f:0,d:0},
-                     S:{w:0,s:0,o:0,f:0,d:0}, W:{w:0,s:0,o:0,f:0,d:0}};
-    let curType = null, curProps = {};
-
-    for (const raw of this.text.split(/\r?\n/)) {
-      const line = raw.trim();
-      if (!line || line.startsWith("$")) continue;
-      if (line === "..") {
-        if (curType === "EXTERIOR-WALL") {
-          curWallAz = (parseFloat(curProps.AZIMUTH || 0) || 0) + bldgAz;
-        } else if (curType === "WINDOW" && curWallAz !== null) {
-          const f = azimuthToFacade(curWallAz);
-          const b = facades[f];
-          b.w++;
-          const keys = Object.keys(curProps);
-          const hasOH = keys.some(k => k.startsWith("OVERHANG-"));
-          const hasFin = keys.some(k => ["FIN-A","FIN-B","FIN-C","FIN-D"].includes(k));
-          if (hasOH) b.o++;
-          if (hasFin) b.f++;
-          if (hasOH || hasFin) b.s++;
-          const d = parseFloat(curProps["OVERHANG-D"] || 0) || 0;
-          if (d > b.d) b.d = d;
+        function renderChips() {
+            for (const k of ["blSim", "blInp", "propSim", "propInp"]) {
+                const el = document.getElementById("chips-" + k);
+                el.innerHTML = "";
+                state[k].forEach((file, idx) => {
+                    const c = document.createElement("span");
+                    c.className = getChipClass(k);
+                    c.innerHTML = `<span>${file.name}</span><span class="x" title="Remove">×</span>`;
+                    c.querySelector(".x").addEventListener("click", e => {
+                        e.stopPropagation(); e.preventDefault();
+                        state[k].splice(idx, 1); renderChips(); updateBtn();
+                    });
+                    el.appendChild(c);
+                });
+                // Toggle has-files style on dropzone
+                const dz = document.querySelector(`[data-target="${k}"]`);
+                if (dz) dz.classList.toggle("has-files", state[k].length > 0);
+            }
         }
-        curType = null; curProps = {};
-        continue;
-      }
-      let m = line.match(HDR_RE);
-      if (m) { curType = m[2]; curProps = {}; continue; }
-      m = line.match(PROP_RE);
-      if (m && curType) curProps[m[1]] = cleanValue(m[2]);
-    }
+        function updateBtn() {
+            $("#runBtn").disabled = !(state.blSim.length || state.propSim.length);
+        }
+        function addFiles(target, files) {
+            for (const f of files) state[target].push(f);
+            renderChips(); updateBtn();
+        }
+        function bindDropzone(zone) {
+            const target = zone.dataset.target;
+            const input = zone.querySelector("input[type=file]");
+            input.addEventListener("change", e => { if (e.target.files.length) addFiles(target, e.target.files); e.target.value = ""; });
+            ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.add("drag"); }));
+            ["dragleave", "drop"].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zone.classList.remove("drag"); }));
+            zone.addEventListener("drop", e => { if (e.dataTransfer.files.length) addFiles(target, e.dataTransfer.files); });
+        }
 
-    const out = {};
-    for (const f of ["N","E","S","W"]) {
-      const b = facades[f];
-      const pct = b.w ? (b.s / b.w * 100) : 0;
-      out[`inp_${f.toLowerCase()}_shading_type`] =
-        b.o && b.f ? "Overhang+Fin" : b.o ? "Overhang" : b.f ? "Fin" : "None";
-      out[`inp_${f.toLowerCase()}_shading_ratio`] = Math.round(pct * 10) / 10;
-      out[`inp_${f.toLowerCase()}_max_overhang_ft`] = Math.round(b.d * 100) / 100;
-    }
-    return out;
-  }
-}
+        document.querySelectorAll(".dropzone").forEach(bindDropzone);
+        $("#runBtn").addEventListener("click", run);
+        $("#clearBtn").addEventListener("click", () => {
+            state.blSim = []; state.blInp = []; state.propSim = []; state.propInp = [];
+            renderChips(); updateBtn(); logClear();
+            logLine(`<span class="dim">Cleared.</span>`);
+        });
+        window.addEventListener("dragover", e => e.preventDefault());
+        window.addEventListener("drop", e => e.preventDefault());
 
-/* ============================================================
- *  COLUMN DEFINITIONS  (port of excel_writer.COLUMNS)
- * ============================================================ */
-const C_BLUE="4472C4", C_GREEN="70AD47", C_ORANGE="ED7D31", C_PURPLE="7030A0",
-      C_GRAY="808080", C_TEAL="00B0F0", C_LIME="92D050", C_RED="FF0000";
-
-const COLUMNS = [
-  ["Option","option_name","@",C_BLUE],
-  ["Results Path","results_path","@",C_BLUE],
-  ["Timestamp","timestamp","@",C_BLUE],
-  ["Climate File","weather_file","@",C_BLUE],
-  ["Climate Zone","climate_zone","@",C_BLUE],
-  ["Heating Unmet Hours","unmet_heating_hrs","#,##0",C_TEAL],
-  ["Cooling Unmet Hours","unmet_cooling_hrs","#,##0",C_TEAL],
-  ["Total Energy Use (kBtu)","total_energy_kbtu","#,##0",C_GREEN],
-  ["Energy Use Intensity (kBtu/ft²)","eui_kbtu_ft2","#,##0.0",C_GREEN],
-  ["Electricity (kBtu)","electricity_kbtu","#,##0",C_GREEN],
-  ["Gas (kBtu)","gas_kbtu","#,##0",C_GREEN],
-  ["Additional Fuel (kBtu)","additional_fuel_kbtu","#,##0",C_GREEN],
-  ["District Cooling (kBtu)","district_cooling_kbtu","#,##0",C_GREEN],
-  ["District Heating (kBtu)","district_heating_kbtu","#,##0",C_GREEN],
-  ["Heating - Electricity Energy Use (kBtu)","htg_elec_kbtu","#,##0",C_ORANGE],
-  ["Heating - Gas Energy Use (kBtu)","htg_gas_kbtu","#,##0",C_ORANGE],
-  ["Heating - Additional Fuel Energy Use (kBtu)","htg_add_fuel_kbtu","#,##0",C_ORANGE],
-  ["Heating - District Heating Energy Use (kBtu)","htg_dist_htg_kbtu","#,##0",C_ORANGE],
-  ["Cooling - Electricity Energy Use (kBtu)","clg_elec_kbtu","#,##0",C_ORANGE],
-  ["Cooling - District Energy Use (kBtu)","clg_dist_kbtu","#,##0",C_ORANGE],
-  ["Interior Lighting - Electricity Energy Use (kBtu)","int_lighting_kbtu","#,##0",C_ORANGE],
-  ["Exterior Lighting - Electricity Energy Use (kBtu)","ext_lighting_kbtu","#,##0",C_ORANGE],
-  ["Interior Equipment - Electricity Energy Use (kBtu)","int_equip_kbtu","#,##0",C_ORANGE],
-  ["Interior Equipment - Gas Energy Use (kBtu)","int_equip_gas_kbtu","#,##0",C_ORANGE],
-  ["Interior Equipment - Additional Fuel Energy Use (kBtu)","int_equip_add_kbtu","#,##0",C_ORANGE],
-  ["Exterior Equipment - Energy Use (kBtu)","ext_equip_kbtu","#,##0",C_ORANGE],
-  ["Fans - Electricity Energy Use (kBtu)","fans_kbtu","#,##0",C_ORANGE],
-  ["Pumps - Electricity Energy Use (kBtu)","pumps_kbtu","#,##0",C_ORANGE],
-  ["Heat Rejection - Electricity Energy Use (kBtu)","heat_reject_kbtu","#,##0",C_ORANGE],
-  ["Humidification - Electricity Energy Use (kBtu)","humid_elec_kbtu","#,##0",C_ORANGE],
-  ["Heat Recovery - Electricity Energy Use (kBtu)","heat_recov_kbtu","#,##0",C_ORANGE],
-  ["Water Systems - Electricity Energy Use (kBtu)","water_sys_elec_kbtu","#,##0",C_ORANGE],
-  ["Water Systems - Gas Energy Use (kBtu)","water_sys_gas_kbtu","#,##0",C_ORANGE],
-  ["Water Systems - Additional Fuel Energy Use (kBtu)","water_sys_add_kbtu","#,##0",C_ORANGE],
-  ["Water Systems - District Heating Energy Use (kBtu)","water_sys_dist_kbtu","#,##0",C_ORANGE],
-  ["Refrigeration - Electricity Energy Use (kBtu)","refrig_kbtu","#,##0",C_ORANGE],
-  ["Generators Electricity Energy Use (kBtu)","gen_kbtu","#,##0",C_ORANGE],
-  ["Misc 1 - Electricity Energy Use (kBtu)","misc1_kbtu","#,##0",C_ORANGE],
-  ["Misc 2 - Electricity Energy Use (kBtu)","misc2_kbtu","#,##0",C_ORANGE],
-  ["Total Water Use (kGal)","total_water_kgal","#,##0.0",C_PURPLE],
-  ["Water Use Intensity (kGal/ft²)","water_use_intensity","0.000",C_PURPLE],
-  ["Heat Rejection - Water Use (kGal)","hr_water_kgal","#,##0.0",C_PURPLE],
-  ["Humidification - Water Use (kGal)","humid_water_kgal","#,##0.0",C_PURPLE],
-  ["Water System - Water Use (kGal)","ws_water_kgal","#,##0.0",C_PURPLE],
-  ["Total Energy Cost ($)","total_cost",'"$"#,##0.00',C_GRAY],
-  ["Energy Cost Intensity ($/ft²)","cost_intensity",'"$"#,##0.00',C_GRAY],
-  ["Electricity Virtual Rate ($/kBtu)","elec_rate_per_kbtu","0.0000",C_GRAY],
-  ["Gas Virtual Rate ($/kBtu)","gas_rate_per_kbtu","0.0000",C_GRAY],
-  ["Additional Fuel Virtual Rate ($/kBtu)","add_fuel_rate_per_kbtu","0.0000",C_GRAY],
-  ["District Cooling Virtual Rate ($/kBtu)","dc_rate_per_kbtu","0.0000",C_GRAY],
-  ["District Heating Virtual Rate ($/kBtu)","dh_rate_per_kbtu","0.0000",C_GRAY],
-  ["Total Carbon Emissions (kg CO2e)","total_carbon_kg","#,##0",C_GRAY],
-  ["Carbon Emission Intensity (kg CO2e/ft²)","carbon_intensity","0.000",C_GRAY],
-  ["Electricity Virtual Rate (kg CO2e/kBtu)","elec_carbon_rate","0.0000",C_GRAY],
-  ["Gas Virtual Rate (kg CO2e/kBtu)","gas_carbon_rate","0.0000",C_GRAY],
-  ["Additional Fuel Virtual Rate (kg CO2e/kBtu)","add_fuel_carbon_rate","0.0000",C_GRAY],
-  ["District Cooling Virtual Rate (kg CO2e/kBtu)","dc_carbon_rate","0.0000",C_GRAY],
-  ["District Heating Virtual Rate (kg CO2e/kBtu)","dh_carbon_rate","0.0000",C_GRAY],
-  ["Peak Heating (kBtuh)","peak_heating_kbtuh","#,##0.0",C_TEAL],
-  ["Peak Heating (Btuh/ft²)","peak_heating_btuh_ft2","#,##0.0",C_TEAL],
-  ["Peak Heating Hour","peak_heating_time","@",C_TEAL],
-  ["Peak Cooling (kBtuh)","peak_cooling_kbtuh","#,##0.0",C_TEAL],
-  ["Peak Cooling (Btuh/ft²)","peak_cooling_btuh_ft2","#,##0.0",C_TEAL],
-  ["Peak Cooling Hour","peak_cooling_time","@",C_TEAL],
-  ["Peak Electrical Load (W)","peak_elec_w","#,##0",C_TEAL],
-  ["Peak Electrical Load Intensity (W/ft²)","peak_elec_w_per_ft2","#,##0.0",C_TEAL],
-  ["Peak Electricity Hour","peak_elec_time","@",C_TEAL],
-  ["Conditioned Floor Area (ft²)","conditioned_floor_area","#,##0",C_LIME],
-  ["Total Floor Area (ft²)","total_floor_area","#,##0",C_LIME],
-  ["Gross Wall Area (ft²)","gross_wall_area","#,##0",C_LIME],
-  ["Above Ground Gross Wall Area (ft²)","above_ground_wall_area","#,##0",C_LIME],
-  ["Above Ground North Wall Area (ft²)","north_wall_area","#,##0",C_LIME],
-  ["Above Ground East Wall Area (ft²)","east_wall_area","#,##0",C_LIME],
-  ["Above Ground South Wall Area (ft²)","south_wall_area","#,##0",C_LIME],
-  ["Above Ground West Wall Area (ft²)","west_wall_area","#,##0",C_LIME],
-  ["North WWR Nominal (%)","north_wwr_nominal","0.0",C_LIME],
-  ["East WWR Nominal (%)","east_wwr_nominal","0.0",C_LIME],
-  ["South WWR Nominal (%)","south_wwr_nominal","0.0",C_LIME],
-  ["West WWR Nominal (%)","west_wwr_nominal","0.0",C_LIME],
-  ["Building WWR Actual (%)","building_wwr","0.0",C_LIME],
-  ["North WWR Actual (%)","north_wwr_actual","0.0",C_LIME],
-  ["East WWR Actual (%)","east_wwr_actual","0.0",C_LIME],
-  ["South WWR Actual (%)","south_wwr_actual","0.0",C_LIME],
-  ["West WWR Actual (%)","west_wwr_actual","0.0",C_LIME],
-  ["Gross Roof Area (ft²)","gross_roof_area","#,##0",C_LIME],
-  ["Skylight Roof Ratio (%)","skylight_ratio","0.0",C_LIME],
-  ["Exterior Wall to Floor Area Ratio","wall_to_floor_ratio","0.000",C_LIME],
-  ["Exterior Roof to Floor Area Ratio","roof_to_floor_ratio","0.000",C_LIME],
-  ["Exterior Envelope to Floor Area Ratio","envelope_to_floor_ratio","0.000",C_LIME],
-  ["North Shading Type","north_shading_type","@",C_LIME],
-  ["North Shading Ratio (%)","north_shading_ratio","0.0",C_LIME],
-  ["West Shading Type","west_shading_type","@",C_LIME],
-  ["West Shading Ratio (%)","west_shading_ratio","0.0",C_LIME],
-  ["South Shading Type","south_shading_type","@",C_LIME],
-  ["South Shading Ratio (%)","south_shading_ratio","0.0",C_LIME],
-  ["East Shading Type","east_shading_type","@",C_LIME],
-  ["East Shading Ratio (%)","east_shading_ratio","0.0",C_LIME],
-  ["INP: Project Title","inp_title","@",C_GRAY],
-  ["INP: Run Period","inp_run_period","@",C_GRAY],
-  ["INP: Site Altitude (ft)","inp_altitude_ft","#,##0",C_GRAY],
-  ["INP: Building Azimuth (°)","inp_building_azimuth","0.0",C_GRAY],
-  ["INP: Master Elec Meter","inp_master_elec_meter","@",C_GRAY],
-  ["INP: Master Fuel Meter","inp_master_fuel_meter","@",C_GRAY],
-  ["INP: Elec Rate ($/kWh)","inp_elec_rate_per_kwh","0.0000",C_GRAY],
-  ["INP: Gas Rate ($/therm)","inp_gas_rate_per_therm","0.0000",C_GRAY],
-  ["INP: Elec Monthly Chg ($)","inp_elec_monthly_chg","0.00",C_GRAY],
-  ["INP: Gas Monthly Chg ($)","inp_gas_monthly_chg","0.00",C_GRAY],
-  ["INP: Glass Type Codes","inp_glass_type_code_list","@",C_GRAY],
-  ["INP: N Overhang Depth (ft)","inp_n_max_overhang_ft","0.00",C_GRAY],
-  ["INP: E Overhang Depth (ft)","inp_e_max_overhang_ft","0.00",C_GRAY],
-  ["INP: S Overhang Depth (ft)","inp_s_max_overhang_ft","0.00",C_GRAY],
-  ["INP: W Overhang Depth (ft)","inp_w_max_overhang_ft","0.00",C_GRAY],
-  ["Vertical Weighted U-Value (Btu/h·ft²·F)","vert_weighted_u","0.000",C_RED],
-  ["Vertical Weighted R-Value (ft²·h·F/Btu)","vert_weighted_r","0.00",C_RED],
-  ["Wall U-Value (Btu/h·ft²·F)","wall_u_value","0.000",C_RED],
-  ["Wall 2 U-Value (Btu/h·ft²·F)","wall2_u_value","0.000",C_RED],
-  ["Roof U-Value (Btu/h·ft²·F)","roof_u_value","0.000",C_RED],
-  ["Exposed Floor U-Value (Btu/h·ft²·F)","exposed_floor_u_value","0.000",C_RED],
-  ["Slab on Grade U-Value (Btu/h·ft²·F)","slab_u_value","0.000",C_RED],
-  ["Assembly U-Value (Btu/h·ft²·F)","assembly_u_value","0.000",C_RED],
-  ["Glass U-Value (Btu/h·ft²·F)","glass_u_value","0.000",C_RED],
-  ["Glass SHGC","glass_shgc","0.000",C_RED],
-  ["Glass VLT","glass_vlt","0.000",C_RED],
-  ["Glass LSG","glass_lsg","0.00",C_RED],
-  ["Infiltration Rate (CFM/ft² facade)","infil_cfm_ft2","0.000",C_RED],
-  ["Lighting Power Density (W/ft²)","lpd_total_w_ft2","0.00",C_LIME],
-  ["Conditioned Lighting Power Density (W/ft²)","lpd_w_ft2","0.00",C_LIME],
-  ["Occupant Density (ft²/person)","occ_density_ft2_person","#,##0.0",C_LIME],
-  ["Conditioned Occupant Density (ft²/person)","cond_occ_density_ft2_person","#,##0.0",C_LIME],
-  ["Equipment Power Density (W/ft²)","epd_total_w_ft2","0.00",C_LIME],
-  ["Conditioned Equipment Power Density (W/ft²)","epd_w_ft2","0.00",C_LIME],
-  ["Total Ventilation Air Flow Rate (CFM)","total_supply_cfm","#,##0",C_RED],
-  ["Ventilation Air Flow Rate per Area (CFM/ft²)","vent_cfm_per_ft2","0.000",C_RED],
-  ["Total Heating Airflow Rate (CFM)","total_htg_cfm","#,##0",C_RED],
-  ["Heating Airflow Rate per Area (CFM/ft²)","htg_cfm_per_ft2","0.000",C_RED],
-  ["Total Cooling Airflow Rate (CFM)","total_clg_cfm","#,##0",C_RED],
-  ["Cooling Airflow Rate per Area (CFM/ft²)","clg_cfm_per_ft2","0.000",C_RED],
-  ["Chiller Efficiency (COP)","chiller_cop","0.00",C_RED],
-  ["Boiler Efficiency (COP)","boiler_cop","0.00",C_RED],
-  ["DX Cooling Efficiency (COP)","dx_cooling_cop","0.00",C_RED],
-  ["DX Heating Efficiency (HSPF)","dx_heating_cop","0.00",C_RED],
-  ["Heat Pump Cooling Efficiency (COP)","hp_cooling_cop","0.00",C_RED],
-  ["Heat Pump Heating Efficiency (COP)","hp_heating_cop","0.00",C_RED],
-  ["Total Fan Power (kW)","total_fan_kw","0.00",C_RED],
-  ["Total Pump Power (kW)","total_pump_kw","0.00",C_RED],
-  ["Service Hot Water Thermal Efficiency (COP)","dhw_efficiency","0.00",C_RED],
-  ["Exterior Lighting (kW)","ext_lighting_kw","0.00",C_RED],
-];
-
-/* ============================================================
- *  Row enrichment (port of _write_sheet's extras)
- * ============================================================ */
-function enrichRow(data, rates) {
-  const elec_kbtu = data.electricity_kbtu || 0;
-  const gas_kbtu = data.gas_kbtu || 0;
-  const total_area = data.total_floor_area || 1;
-
-  const elec_rate = data.inp_elec_rate_per_kbtu || rates.electricity_per_kbtu || 0;
-  const gas_rate = data.inp_gas_rate_per_kbtu || rates.gas_per_kbtu || 0;
-  const elec_carbon = rates.elec_carbon_kg_per_kbtu || 0;
-  const gas_carbon = rates.gas_carbon_kg_per_kbtu || 0;
-
-  const total_cost = elec_kbtu*elec_rate + gas_kbtu*gas_rate;
-  const cost_intensity = total_area > 0 ? total_cost/total_area : 0;
-  const total_carbon = elec_kbtu*elec_carbon + gas_kbtu*gas_carbon;
-  const carbon_intensity = total_area > 0 ? total_carbon/total_area : 0;
-
-  const win_area = data.total_window_area || 0;
-  const wall_area = data.total_wall_area || 0;
-  const glass_u = data.glass_u_value || 0;
-  const wall_u = data.wall_u_value || 0;
-  const opaque = wall_area - win_area;
-  const vert_u = (win_area + opaque) > 0
-    ? (glass_u*win_area + wall_u*opaque) / (win_area + opaque)
-    : wall_u;
-  const vert_r = vert_u > 0 ? 1/vert_u : 0;
-
-  const extra = {
-    total_cost, cost_intensity,
-    elec_rate_per_kbtu: elec_rate, gas_rate_per_kbtu: gas_rate,
-    add_fuel_rate_per_kbtu:0, dc_rate_per_kbtu:0, dh_rate_per_kbtu:0,
-    total_carbon_kg: total_carbon, carbon_intensity,
-    elec_carbon_rate: elec_carbon, gas_carbon_rate: gas_carbon,
-    add_fuel_carbon_rate:0, dc_carbon_rate:0, dh_carbon_rate:0,
-    vert_weighted_u: vert_u, vert_weighted_r: vert_r,
-    additional_fuel_kbtu:0, district_cooling_kbtu:0, district_heating_kbtu:0,
-    htg_add_fuel_kbtu:0, htg_dist_htg_kbtu:0, clg_dist_kbtu:0,
-    int_equip_gas_kbtu:0, int_equip_add_kbtu:0, ext_equip_kbtu:0,
-    humid_elec_kbtu:0, heat_recov_kbtu:0,
-    water_sys_add_kbtu:0, water_sys_dist_kbtu:0,
-    refrig_kbtu:0, gen_kbtu:0, misc1_kbtu:0, misc2_kbtu:0,
-    total_water_kgal:0, water_use_intensity:0,
-    hr_water_kgal:0, humid_water_kgal:0, ws_water_kgal:0,
-    gross_wall_area: wall_area, above_ground_wall_area: wall_area,
-    north_wall_area:0, east_wall_area:0, south_wall_area:0, west_wall_area:0,
-    north_wwr_nominal:0, east_wwr_nominal:0, south_wwr_nominal:0, west_wwr_nominal:0,
-    north_wwr_actual:0, east_wwr_actual:0, south_wwr_actual:0, west_wwr_actual:0,
-    gross_roof_area:0, skylight_ratio:0,
-    wall_to_floor_ratio:0, roof_to_floor_ratio:0, envelope_to_floor_ratio:0,
-    north_shading_type:  data.inp_n_shading_type || "",
-    north_shading_ratio: data.inp_n_shading_ratio || 0,
-    west_shading_type:   data.inp_w_shading_type || "",
-    west_shading_ratio:  data.inp_w_shading_ratio || 0,
-    south_shading_type:  data.inp_s_shading_type || "",
-    south_shading_ratio: data.inp_s_shading_ratio || 0,
-    east_shading_type:   data.inp_e_shading_type || "",
-    east_shading_ratio:  data.inp_e_shading_ratio || 0,
-    wall2_u_value:0, roof_u_value:0, exposed_floor_u_value:0, assembly_u_value:0,
-    infil_cfm_ft2:0,
-    total_htg_cfm:0, htg_cfm_per_ft2:0,
-    total_clg_cfm: data.total_supply_cfm || 0,
-    clg_cfm_per_ft2: data.vent_cfm_per_ft2 || 0,
-    chiller_cop:0, boiler_cop:0, hp_cooling_cop:0, hp_heating_cop:0,
-    total_pump_kw:0,
-  };
-
-  const merged = {...extra, ...data};
-  for (const k of Object.keys(extra)) {
-    if (merged[k] === undefined || merged[k] === null || merged[k] === 0) {
-      if (extra[k] !== 0) merged[k] = extra[k];
-    }
-  }
-  // Force computed fields to extras
-  for (const k of ["total_cost","cost_intensity","elec_rate_per_kbtu","gas_rate_per_kbtu",
-                   "total_carbon_kg","carbon_intensity","vert_weighted_u","vert_weighted_r",
-                   "north_shading_type","north_shading_ratio","west_shading_type","west_shading_ratio",
-                   "south_shading_type","south_shading_ratio","east_shading_type","east_shading_ratio",
-                   "total_clg_cfm","clg_cfm_per_ft2","gross_wall_area","above_ground_wall_area"]) {
-    merged[k] = extra[k];
-  }
-  return merged;
-}
-
-/* ============================================================
- *  WORKBOOK BUILDING (SheetJS / xlsx-js-style)
- * ============================================================ */
-function buildWorkbook(blRows, propRows, rates) {
-  const wb = XLSX.utils.book_new();
-  for (const [name, rows] of [["BL Data", blRows], ["Proposed Data", propRows]]) {
-    const ws = buildSheet(rows, rates);
-    XLSX.utils.book_append_sheet(wb, ws, name);
-  }
-  return wb;
-}
-
-function buildSheet(rows, rates) {
-  const aoa = [];
-  // Header
-  aoa.push(COLUMNS.map(c => c[0]));
-
-  for (const row of rows) {
-    const merged = enrichRow(row, rates);
-    aoa.push(COLUMNS.map(([, key, fmt]) => {
-      let v = merged[key];
-      if (v === undefined || v === null) v = fmt === "@" ? "" : 0;
-      return v;
-    }));
-  }
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // Header styling
-  const headerStyle = (color) => ({
-    font: {bold:true, color:{rgb:"FFFFFF"}, sz:9},
-    fill: {patternType:"solid", fgColor:{rgb:color}},
-    alignment: {wrapText:true, vertical:"center", horizontal:"center"},
-    border: {
-      top:{style:"thin"}, bottom:{style:"thin"},
-      left:{style:"thin"}, right:{style:"thin"},
-    },
-  });
-  const cellStyle = (fmt) => ({
-    alignment: {horizontal: fmt === "@" ? "left" : "right", vertical:"center"},
-    border: {
-      top:{style:"thin"}, bottom:{style:"thin"},
-      left:{style:"thin"}, right:{style:"thin"},
-    },
-  });
-
-  const colWidths = [];
-  for (let c = 0; c < COLUMNS.length; c++) {
-    const [hdr, , fmt, color] = COLUMNS[c];
-    const addr = XLSX.utils.encode_cell({r:0, c});
-    if (ws[addr]) ws[addr].s = headerStyle(color);
-
-    let maxLen = hdr.length;
-    for (let r = 1; r < aoa.length; r++) {
-      const cellAddr = XLSX.utils.encode_cell({r, c});
-      const cell = ws[cellAddr];
-      if (!cell) continue;
-      cell.s = cellStyle(fmt);
-      if (fmt !== "@") cell.z = fmt;
-      const sval = cell.v === null || cell.v === undefined ? "" : String(cell.v);
-      if (sval.length > maxLen) maxLen = sval.length;
-    }
-    colWidths.push({wch: Math.min(Math.max(maxLen + 2, 12), 40)});
-  }
-  ws["!cols"] = colWidths;
-  ws["!rows"] = [{hpx: 60}];
-  ws["!freeze"] = {xSplit:0, ySplit:1};
-  // SheetJS uses !freeze differently; the workbook view freeze is set on workbook
-  ws["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:aoa.length-1, c:COLUMNS.length-1}});
-
-  return ws;
-}
-
-/* ============================================================
- *  PROCESSING PIPELINE
- * ============================================================ */
-async function processRun(simFile, inpFile, label, climateZone) {
-  logLine(`<span class="dim">  parsing SIM:</span> ${simFile.name} <span class="dim">(${(simFile.size/1024).toFixed(0)} KB)</span>`);
-  const simText = await readFileText(simFile);
-  const r = new SIMParser(simText, simFile.name).parse();
-  r.option_name = label || simFile.name.replace(/\.[Ss][Ii][Mm]$/,"");
-  r.results_path = simFile.name;
-  r.climate_zone = climateZone || "";
-
-  if (inpFile) {
-    logLine(`<span class="dim">  parsing INP:</span> ${inpFile.name} <span class="dim">(${(inpFile.size/1024).toFixed(0)} KB)</span>`);
-    try {
-      const inpText = await readFileText(inpFile);
-      const inpData = new INPParser(inpText, inpFile.name).parse();
-      Object.assign(r, inpData);
-      r.inp_file = inpFile.name;
-    } catch (e) {
-      logLine(`<span class="warn">  inp parse failed: ${e.message}</span>`);
-    }
-  }
-  return r;
-}
-
-async function run() {
-  if (!state.blSim.length && !state.propSim.length) {
-    toast("Drop at least one .SIM file");
-    return;
-  }
-  const btn = $("#runBtn");
-  btn.disabled = true;
-  $("#status").textContent = "Working…";
-  logClear();
-
-  const option = $("#optionLabel").value.trim();
-  const cz = $("#climateZone").value;
-  const out = $("#outputName").value.trim() || "energy_results.xlsx";
-  const autoPair = $("#autoPair").checked;
-
-  const pair = (sims, inps) => sims.map((s, i) => autoPair && inps[i] ? [s, inps[i]] : [s, null]);
-
-  try {
-    const blRows = [];
-    if (state.blSim.length) {
-      logLine(`<span class="ok">Processing Baseline runs (${state.blSim.length}):</span>`);
-      for (const [i, [s, inp]] of pair(state.blSim, state.blInp).entries()) {
-        const label = state.blSim.length > 1 ? `${option} BL ${i+1}` : option;
-        blRows.push(await processRun(s, inp, label, cz));
-      }
-    }
-
-    const propRows = [];
-    if (state.propSim.length) {
-      logLine(`<span class="ok">Processing Proposed runs (${state.propSim.length}):</span>`);
-      for (const [i, [s, inp]] of pair(state.propSim, state.propInp).entries()) {
-        const label = state.propSim.length > 1 ? `${option} Prop ${i+1}` : option;
-        propRows.push(await processRun(s, inp, label, cz));
-      }
-    }
-
-    logLine(`<span class="ok">Building workbook…</span>`);
-    const wb = buildWorkbook(blRows, propRows, {});
-
-    XLSX.writeFile(wb, out, {bookType:"xlsx", cellStyles:true});
-
-    logLine(`<span class="ok">✓ Saved ${out}</span>`);
-
-    // Summary of BL run 1
-    if (blRows.length) {
-      const r = blRows[0];
-      logLine("");
-      logLine(`<span class="dim">--- Key values (BL Run 1) ---</span>`);
-      const fmt = (n, d=0) => Number(n||0).toLocaleString(undefined, {maximumFractionDigits:d, minimumFractionDigits:d});
-      logLine(`  Project:           ${r.project_name||""}`);
-      logLine(`  Weather file:      ${r.weather_file||""}`);
-      logLine(`  Total area (ft²):  ${fmt(r.total_floor_area)}`);
-      logLine(`  Total kBtu:        ${fmt(r.total_energy_kbtu)}`);
-      logLine(`  EUI (kBtu/ft²):    ${fmt(r.eui_kbtu_ft2,1)}`);
-      logLine(`  Peak cooling:      ${fmt(r.peak_cooling_kbtuh,1)} kBtuh`);
-      logLine(`  Peak heating:      ${fmt(r.peak_heating_kbtuh,1)} kBtuh`);
-      logLine(`  Glass U / SHGC:    ${fmt(r.glass_u_value,3)} / ${fmt(r.glass_shgc,3)}`);
-      if (r.inp_file) {
-        logLine(`  Elec rate ($/kWh): ${r.inp_elec_rate_per_kwh ?? "—"}`);
-        logLine(`  Gas rate ($/therm):${r.inp_gas_rate_per_therm ?? "—"}`);
-      }
-    }
-    toast("Excel file downloaded");
-  } catch (e) {
-    console.error(e);
-    logLine(`<span class="err">ERROR: ${e.message}</span>`);
-    toast("Error — see log");
-  } finally {
-    btn.disabled = false;
-    $("#status").textContent = "";
-    updateBtn();
-  }
-}
-
-/* ============================================================
- *  UI WIRING
- * ============================================================ */
-function renderChips() {
-  for (const k of ["blSim","blInp","propSim","propInp"]) {
-    const isInp = k.endsWith("Inp");
-    const el = document.getElementById("chips-" + k);
-    el.innerHTML = "";
-    state[k].forEach((file, idx) => {
-      const c = document.createElement("span");
-      c.className = "chip" + (isInp ? " inp" : "");
-      c.innerHTML = `<span>${file.name}</span><span class="x" title="Remove">×</span>`;
-      c.querySelector(".x").addEventListener("click", (e) => {
-        e.stopPropagation(); e.preventDefault();
-        state[k].splice(idx, 1);
-        renderChips();
-        updateBtn();
-      });
-      el.appendChild(c);
-    });
-  }
-}
-
-function updateBtn() {
-  $("#runBtn").disabled = !(state.blSim.length || state.propSim.length);
-}
-
-function addFiles(target, files) {
-  for (const f of files) state[target].push(f);
-  renderChips();
-  updateBtn();
-}
-
-function bindDropzone(zone) {
-  const target = zone.dataset.target;
-  const input = zone.querySelector("input[type=file]");
-  input.addEventListener("change", e => {
-    if (e.target.files.length) addFiles(target, e.target.files);
-    e.target.value = "";
-  });
-  ["dragenter","dragover"].forEach(ev => zone.addEventListener(ev, e => {
-    e.preventDefault(); e.stopPropagation();
-    zone.classList.add("drag");
-  }));
-  ["dragleave","drop"].forEach(ev => zone.addEventListener(ev, e => {
-    e.preventDefault(); e.stopPropagation();
-    zone.classList.remove("drag");
-  }));
-  zone.addEventListener("drop", e => {
-    if (e.dataTransfer.files.length) addFiles(target, e.dataTransfer.files);
-  });
-}
-
-document.querySelectorAll(".dropzone").forEach(bindDropzone);
-
-$("#runBtn").addEventListener("click", run);
-$("#clearBtn").addEventListener("click", () => {
-  state.blSim = []; state.blInp = []; state.propSim = []; state.propInp = [];
-  renderChips();
-  updateBtn();
-  logClear();
-  logLine(`<span class="dim">Cleared.</span>`);
-});
-
-// Prevent default page drag/drop outside zones
-window.addEventListener("dragover", e => e.preventDefault());
-window.addEventListener("drop", e => e.preventDefault());
-
-renderChips();
-updateBtn();
-</script>
+        renderChips(); updateBtn();
+    </script>
 </body>
+
 </html>
