@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSU Energy Model — SIM ↔ Excel Mapping</title>
+<style>
+  :root {
+    --c-general:    #d4e6f1;
+    --c-energy:     #d5f5e3;
+    --c-enduse:     #fef9e7;
+    --c-water:      #e8daef;
+    --c-cost:       #fadbd8;
+    --c-carbon:     #d6eaf8;
+    --c-peak:       #fdebd0;
+    --c-geometry:   #eafaf1;
+    --c-envelope:   #fef5e7;
+    --c-loads:      #e8f8f5;
+    --c-airflow:    #f4ecf7;
+    --c-systems:    #f9ebea;
+    --c-hdr-general:  #2471a3;
+    --c-hdr-energy:   #1e8449;
+    --c-hdr-enduse:   #d4ac0d;
+    --c-hdr-water:    #7d3c98;
+    --c-hdr-cost:     #c0392b;
+    --c-hdr-carbon:   #1a5276;
+    --c-hdr-peak:     #d35400;
+    --c-hdr-geometry: #1d8348;
+    --c-hdr-envelope: #b7950b;
+    --c-hdr-loads:    #148f77;
+    --c-hdr-airflow:  #6c3483;
+    --c-hdr-systems:  #943126;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #222; font-size: 13px; }
+
+  /* ── Top banner ── */
+  .banner {
+    background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
+    color: #ecf0f1; padding: 18px 24px; display: flex; align-items: center; gap: 16px;
+  }
+  .banner h1 { font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .banner p  { font-size: 12px; opacity: .75; margin-top: 3px; }
+  .sim-badge {
+    background: #e67e22; color: #fff; border-radius: 5px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; margin-left: auto;
+  }
+
+  /* ── Tab bar ── */
+  .tabs { display: flex; background: #2c3e50; padding: 0 24px; }
+  .tab-btn {
+    padding: 12px 24px; border: none; background: transparent; color: #bdc3c7;
+    font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all .2s;
+  }
+  .tab-btn.active   { color: #fff; border-bottom-color: #e67e22; }
+  .tab-btn:hover    { color: #ecf0f1; }
+
+  /* ── Reference toggle ── */
+  .ref-bar {
+    background: #34495e; color: #ecf0f1; padding: 8px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ref-bar span { font-size: 12px; }
+  .ref-toggle { background: #e67e22; border: none; color: #fff; border-radius: 4px;
+    padding: 4px 12px; cursor: pointer; font-size: 12px; font-weight: 600; }
+
+  /* ── SIM Reference Panel ── */
+  .ref-panel {
+    display: none; background: #1c2833; color: #ecf0f1; padding: 20px 24px;
+    border-bottom: 3px solid #e67e22;
+  }
+  .ref-panel.open { display: block; }
+  .ref-panel h3 { color: #e67e22; margin-bottom: 12px; font-size: 14px; }
+  .ref-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+  }
+  .ref-card { background: #2c3e50; border-radius: 6px; padding: 12px; }
+  .ref-card h4 { font-size: 12px; color: #f39c12; margin-bottom: 6px; }
+  .ref-card ul { list-style: none; font-size: 11px; line-height: 1.8; }
+  .ref-card ul li span.tag { background: #e67e22; color:#fff; border-radius:3px; padding:1px 5px; font-size:10px; margin-right:4px; font-weight:600; }
+
+  /* ── Column-group legend ── */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 24px; background: #fff; border-bottom: 1px solid #ddd; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 2px; }
+
+  /* ── Table wrapper ── */
+  .table-wrap { overflow: auto; max-height: calc(100vh - 220px); padding: 0 24px 24px; }
+  table { border-collapse: collapse; white-space: nowrap; background: #fff; }
+  thead tr.group-row th {
+    font-size: 11px; font-weight: 700; color: #fff;
+    text-align: center; padding: 5px 8px; position: sticky; top: 0; z-index: 10;
+  }
+  thead tr.col-row th {
+    font-size: 11px; font-weight: 600; padding: 6px 8px;
+    position: sticky; top: 24px; z-index: 9; cursor: help;
+    border-bottom: 2px solid #ccc; white-space: normal; max-width: 110px; min-width: 80px;
+    vertical-align: bottom; text-align: center; line-height: 1.3;
+  }
+  thead tr.col-row th .sim-src { display: block; font-size: 9px; font-weight: 400; color: #555; margin-top: 3px; font-style: italic; }
+  thead tr.col-row th:first-child { min-width: 160px; text-align: left; }
+
+  tbody tr:nth-child(even) td { background: #f8f9fa; }
+  tbody tr:hover td { background: #ebf5fb; }
+  tbody td {
+    padding: 5px 8px; border-right: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8;
+    font-size: 12px; text-align: right;
+  }
+  tbody td:first-child {
+    font-weight: 700; text-align: left; position: sticky; left: 0; background: #fff;
+    border-right: 2px solid #aaa; z-index: 2; min-width: 160px; padding-left: 12px;
+  }
+  tbody tr:nth-child(even) td:first-child { background: #f0f0f0; }
+  tbody tr:hover td:first-child { background: #d6eaf8; }
+
+  /* Proposed row highlight */
+  tr.proposed td { background: #eafaf1 !important; }
+  tr.proposed td:first-child { background: #a9dfbf !important; }
+
+  /* Null/blank cell */
+  td.blank { color: #bbb; }
+  td.null-val::after { content: '—'; color: #ccc; }
+
+  /* Tooltip */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    background: #1c2833; color: #ecf0f1; padding: 6px 10px; border-radius: 5px;
+    font-size: 11px; white-space: pre-wrap; max-width: 280px; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,.4); line-height: 1.5;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div>
+    <h1>MSU Energy Model — SIM ↔ Excel Mapping</h1>
+    <p>DOE-2.2 · Baltimore, MD TMY2 · Climate Zone 4A · Conditioned Area: 265,425 ft²</p>
+  </div>
+  <div class="sim-badge">📂 Baseline Design.SIM</div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('bl')">BL Data</button>
+  <button class="tab-btn" onclick="switchTab('proposed')">Proposed Data</button>
+  <button class="tab-btn" onclick="switchTab('mapping')">SIM Report Index</button>
+</div>
+
+<div class="ref-bar">
+  <span>Hover column headers for SIM file source &nbsp;·&nbsp; Click ▼ to expand SIM mapping reference</span>
+  <button class="ref-toggle" onclick="toggleRef()">▼ SIM Reference</button>
+</div>
+
+<div class="ref-panel" id="refPanel">
+  <h3>DOE-2.2 SIM File Report → Excel Column Mapping</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <h4>File Header (line 1)</h4>
+      <ul>
+        <li><span class="tag">Option</span>User-defined run label</li>
+        <li><span class="tag">Results Path</span>Filename from run control</li>
+        <li><span class="tag">Timestamp</span>DOE-2.2-50a  DATE  TIME</li>
+        <li><span class="tag">Climate File</span>WEATHER FILE- … (every REPORT header)</li>
+        <li><span class="tag">Climate Zone</span>ASHRAE 90.1 lookup by city</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- PS-B · Utility and Fuel Use Summary</h4>
+      <ul>
+        <li><span class="tag">Electricity</span>EM1 TOTAL KWH × 3.412</li>
+        <li><span class="tag">Gas</span>FM1 TOTAL THERM × 100</li>
+        <li><span class="tag">Peak Elec Load</span>EM1 MAX KW × 1,000 (W)</li>
+        <li><span class="tag">Total Energy</span>Σ all meter kBtu</li>
+        <li><span class="tag">EUI</span>Total kBtu ÷ Cond. Floor Area</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- PS-E · Energy End-Use Summary (Electric)</h4>
+      <ul>
+        <li><span class="tag">Htg-Elec</span>SPACE HEATING col, annual KWH×3.412</li>
+        <li><span class="tag">Clg-Elec</span>SPACE COOLING col</li>
+        <li><span class="tag">Int Ltg</span>LIGHTS col</li>
+        <li><span class="tag">Int Equip</span>MISC EQUIP col</li>
+        <li><span class="tag">Fans</span>VENT FANS col</li>
+        <li><span class="tag">Pumps</span>PUMPS & AUX col</li>
+        <li><span class="tag">Heat Reject</span>HEAT REJECT col</li>
+        <li><span class="tag">Water Sys Elec</span>DOMEST HOT WTR col</li>
+        <li><span class="tag">Ext Ltg</span>EXT USAGE col</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- PS-E · Energy End-Use Summary (Fuel)</h4>
+      <ul>
+        <li><span class="tag">Htg-Gas</span>SPACE HEATING col, annual MBTU×1000</li>
+        <li><span class="tag">Water Sys Gas</span>DOMEST HOT WTR col</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- PS-H · DHW Plant Loads</h4>
+      <ul>
+        <li><span class="tag">Water Sys</span>Annual DHW load (MBTU)</li>
+        <li><span class="tag">Total Water Use</span>Computed from DHW + makeup</li>
+        <li><span class="tag">SHW COP</span>Plant thermal efficiency</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- PS-A · Plant Energy Utilization</h4>
+      <ul>
+        <li><span class="tag">Htg Load</span>TOTAL HEAT LOAD (MBTU/yr)</li>
+        <li><span class="tag">Clg Load</span>TOTAL COOLING LOAD (MBTU/yr)</li>
+        <li><span class="tag">Total Elec</span>TOTAL ELECTR (MWH/yr)</li>
+        <li><span class="tag">Total Fuel</span>TOTAL FUEL INPUT (MBTU/yr)</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- SS-R · System Unmet Hours</h4>
+      <ul>
+        <li><span class="tag">Htg Unmet Hrs</span>Hours below htg setpoint</li>
+        <li><span class="tag">Clg Unmet Hrs</span>Hours above clg setpoint</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- LS-A · Space Peak Loads Summary</h4>
+      <ul>
+        <li><span class="tag">Peak Htg</span>Sum zone heating peaks (kBtu/hr)</li>
+        <li><span class="tag">Peak Htg Hr</span>Month/Day/Hour at system peak</li>
+        <li><span class="tag">Peak Clg</span>Sum zone cooling peaks</li>
+        <li><span class="tag">Peak Clg Hr</span>Month/Day/Hour at system peak</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- SV-A · System Design Parameters</h4>
+      <ul>
+        <li><span class="tag">Total Vent CFM</span>Supply air / OA design flow</li>
+        <li><span class="tag">Htg Airflow</span>Heating design flow rate</li>
+        <li><span class="tag">Clg Airflow</span>Cooling design flow rate</li>
+        <li><span class="tag">Fan Power</span>Design fan kW</li>
+        <li><span class="tag">DX COP</span>Cooling EIR→COP conversion</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- LV-B · Summary of Spaces</h4>
+      <ul>
+        <li><span class="tag">Cond. Area</span>Building Totals conditioned area (ft²)</li>
+        <li><span class="tag">Total Area</span>Building Totals gross floor area</li>
+        <li><span class="tag">LPD</span>Installed lighting W/ft²</li>
+        <li><span class="tag">EPD</span>Plug load W/ft²</li>
+        <li><span class="tag">Occupancy</span>ft²/person from schedule</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- LV-N · Building Coordinate Geometry</h4>
+      <ul>
+        <li><span class="tag">Gross Wall</span>Total exterior wall area (ft²)</li>
+        <li><span class="tag">N/E/S/W Wall</span>Wall area by cardinal direction</li>
+        <li><span class="tag">Gross Roof</span>Total roof area (ft²)</li>
+        <li><span class="tag">WWR</span>Window-to-wall ratio by facade</li>
+        <li><span class="tag">Skylight %</span>Skylight/roof ratio</li>
+      </ul>
+    </div>
+    <div class="ref-card">
+      <h4>REPORT- LV-C · Details of Space</h4>
+      <ul>
+        <li><span class="tag">Wall U</span>Opaque wall U-value (Btu/h·ft²·F)</li>
+        <li><span class="tag">Roof U</span>Roof/ceiling U-value</li>
+        <li><span class="tag">Slab U</span>Slab-on-grade U-value</li>
+        <li><span class="tag">Glass U</span>Fenestration U-value</li>
+        <li><span class="tag">SHGC</span>Solar heat gain coefficient</li>
+        <li><span class="tag">VLT</span>Visible light transmittance</li>
+        <li><span class="tag">Infiltration</span>CFM/ft² facade at design pressure</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span style="font-weight:700;font-size:12px;margin-right:6px;">Column Groups:</span>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-general)"></div>General</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-energy)"></div>Energy Totals</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-enduse)"></div>End-Use</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-water)"></div>Water</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-cost)"></div>Cost</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-carbon)"></div>Carbon</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-peak)"></div>Peak Loads</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-geometry)"></div>Geometry</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-envelope)"></div>Envelope</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-loads)"></div>Internal Loads</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-airflow)"></div>Airflow</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-hdr-systems)"></div>Systems</div>
+</div>
+
+<!-- ═══ BL DATA TAB ═══ -->
+<div id="tab-bl" class="tab-panel active">
+<div class="table-wrap">
+<table id="tblBL"></table>
+</div>
+</div>
+
+<!-- ═══ PROPOSED DATA TAB ═══ -->
+<div id="tab-proposed" class="tab-panel">
+<div class="table-wrap">
+<table id="tblProposed"></table>
+</div>
+</div>
+
+<!-- ═══ MAPPING INDEX TAB ═══ -->
+<div id="tab-mapping" class="tab-panel">
+<div style="padding:24px;max-width:900px;">
+  <h2 style="margin-bottom:16px;color:#2c3e50;">Complete Column → SIM File Source Index</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr style="background:#2c3e50;color:#fff;">
+        <th style="padding:8px 12px;text-align:left;width:40px;">#</th>
+        <th style="padding:8px 12px;text-align:left;">Excel Column</th>
+        <th style="padding:8px 12px;text-align:left;">Unit</th>
+        <th style="padding:8px 12px;text-align:left;">SIM Report / Source</th>
+        <th style="padding:8px 12px;text-align:left;">Extraction Method</th>
+      </tr>
+    </thead>
+    <tbody id="mappingBody"></tbody>
+  </table>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  COLUMN DEFINITIONS
+//  Each entry: [group, display label, unit, sim_source, sim_method]
+// ═══════════════════════════════════════════════════════════════
+const GROUPS = {
+  G: {label:'General',         color:'var(--c-hdr-general)'},
+  E: {label:'Energy Totals',   color:'var(--c-hdr-energy)'},
+  EU:{label:'End-Use',         color:'var(--c-hdr-enduse)'},
+  W: {label:'Water Use',       color:'var(--c-hdr-water)'},
+  C: {label:'Cost',            color:'var(--c-hdr-cost)'},
+  CO:{label:'Carbon',          color:'var(--c-hdr-carbon)'},
+  P: {label:'Peak Loads',      color:'var(--c-hdr-peak)'},
+  GE:{label:'Geometry',        color:'var(--c-hdr-geometry)'},
+  EN:{label:'Envelope',        color:'var(--c-hdr-envelope)'},
+  L: {label:'Internal Loads',  color:'var(--c-hdr-loads)'},
+  A: {label:'Airflow',         color:'var(--c-hdr-airflow)'},
+  S: {label:'Systems',         color:'var(--c-hdr-systems)'},
+};
+
+const COLS = [
+  // [group, label, unit, sim_report, extraction]
+  ['G',  'Option',               '',         'User defined',                 'Run label from parametric study'],
+  ['G',  'Results Path',         '',         'File header – line 1',         'Filename of the .SIM output file'],
+  ['G',  'Timestamp',            '',         'File header – line 1',         'DOE-2.2-50a  DATE  TIME stamp'],
+  ['G',  'Climate File',         '',         'All REPORT headers',           'WEATHER FILE- … on every report page'],
+  ['G',  'Climate Zone',         '',         'ASHRAE 90.1 lookup',           'Derived from climate city/state'],
+  ['E',  'Heating Unmet Hrs',    'hrs',      'REPORT- SS-R',                 'Unmet heating load hours across all zones'],
+  ['E',  'Cooling Unmet Hrs',    'hrs',      'REPORT- SS-R',                 'Unmet cooling load hours across all zones'],
+  ['E',  'Total Energy Use',     'kBtu',     'REPORT- PS-B',                 'EM1 TOTAL KWH×3.412 + FM1 TOTAL THERM×100'],
+  ['E',  'EUI',                  'kBtu/ft²', 'Calculated',                   'Total Energy ÷ Conditioned Floor Area (LV-B)'],
+  ['E',  'Electricity',          'kBtu',     'REPORT- PS-B',                 'EM1 ELECTRICITY TOTAL KWH × 3.412'],
+  ['E',  'Gas',                  'kBtu',     'REPORT- PS-B',                 'FM1 NATURAL-GAS TOTAL THERM × 100'],
+  ['E',  'Additional Fuel',      'kBtu',     'REPORT- PS-B',                 'Additional fuel meter TOTAL × conversion'],
+  ['E',  'District Cooling',     'kBtu',     'REPORT- PS-B',                 'District cooling meter (if present)'],
+  ['E',  'District Heating',     'kBtu',     'REPORT- PS-B',                 'District heating meter (if present)'],
+  ['EU', 'Htg – Elec',           'kBtu',     'REPORT- PS-E (Electric)',      'Annual SPACE HEATING KWH × 3.412'],
+  ['EU', 'Htg – Gas',            'kBtu',     'REPORT- PS-E (Fuel)',          'Annual SPACE HEATING MBTU × 1,000'],
+  ['EU', 'Htg – Add. Fuel',      'kBtu',     'REPORT- PS-E (Fuel)',          'Additional fuel SPACE HEATING'],
+  ['EU', 'Htg – Dist. Htg',      'kBtu',     'REPORT- PS-E',                 'District heating end-use'],
+  ['EU', 'Clg – Elec',           'kBtu',     'REPORT- PS-E (Electric)',      'Annual SPACE COOLING KWH × 3.412'],
+  ['EU', 'Clg – District',       'kBtu',     'REPORT- PS-E',                 'District cooling end-use'],
+  ['EU', 'Int Lighting – Elec',  'kBtu',     'REPORT- PS-E (Electric)',      'Annual LIGHTS KWH × 3.412'],
+  ['EU', 'Ext Lighting – Elec',  'kBtu',     'REPORT- PS-E (Electric)',      'Annual EXT USAGE KWH × 3.412'],
+  ['EU', 'Int Equip – Elec',     'kBtu',     'REPORT- PS-E (Electric)',      'Annual MISC EQUIP KWH × 3.412'],
+  ['EU', 'Int Equip – Gas',      'kBtu',     'REPORT- PS-E (Fuel)',          'Annual MISC EQUIP MBTU × 1,000'],
+  ['EU', 'Int Equip – Add. Fuel','kBtu',     'REPORT- PS-E (Fuel)',          'Additional fuel MISC EQUIP'],
+  ['EU', 'Ext Equipment',        'kBtu',     'REPORT- PS-E',                 'Exterior equipment end-use'],
+  ['EU', 'Fans – Elec',          'kBtu',     'REPORT- PS-E (Electric)',      'Annual VENT FANS KWH × 3.412'],
+  ['EU', 'Pumps – Elec',         'kBtu',     'REPORT- PS-E (Electric)',      'Annual PUMPS & AUX KWH × 3.412'],
+  ['EU', 'Heat Rejection – Elec','kBtu',     'REPORT- PS-E (Electric)',      'Annual HEAT REJECT KWH × 3.412'],
+  ['EU', 'Humidification – Elec','kBtu',     'REPORT- PS-E (Electric)',      'Annual HT PUMP SUPPLEM KWH × 3.412'],
+  ['EU', 'Heat Recovery – Elec', 'kBtu',     'REPORT- PS-E (Electric)',      'Calculated from REFRIG DISPLAY or system'],
+  ['EU', 'Water Sys – Elec',     'kBtu',     'REPORT- PS-E (Electric)',      'Annual DOMEST HOT WTR KWH × 3.412'],
+  ['EU', 'Water Sys – Gas',      'kBtu',     'REPORT- PS-E (Fuel)',          'Annual DOMEST HOT WTR MBTU × 1,000'],
+  ['EU', 'Water Sys – Add. Fuel','kBtu',     'REPORT- PS-E (Fuel)',          'Additional fuel DOMEST HOT WTR'],
+  ['EU', 'Water Sys – Dist. Htg','kBtu',     'REPORT- PS-E',                 'District heating water systems'],
+  ['EU', 'Refrigeration – Elec', 'kBtu',     'REPORT- PS-E (Electric)',      'Annual REFRIG DISPLAY KWH × 3.412'],
+  ['EU', 'Generators – Elec',    'kBtu',     'REPORT- PS-E (Electric)',      'On-site generation (if modeled)'],
+  ['EU', 'Misc 1 – Elec',        'kBtu',     'REPORT- PS-E (Electric)',      'Miscellaneous end-use meter 1'],
+  ['EU', 'Misc 2 – Elec',        'kBtu',     'REPORT- PS-E (Electric)',      'Miscellaneous end-use meter 2'],
+  ['W',  'Total Water Use',      'kGal',     'REPORT- PS-H',                 'Annual water consumption from all systems'],
+  ['W',  'Water Use Intensity',  'kGal/ft²', 'Calculated',                   'Total Water ÷ Total Floor Area'],
+  ['W',  'Heat Rejection Water', 'kGal',     'REPORT- PS-H',                 'Cooling tower / heat rejection makeup water'],
+  ['W',  'Humidification Water', 'kGal',     'REPORT- PS-H',                 'Humidifier water use'],
+  ['W',  'Water System Water',   'kGal',     'REPORT- PS-H',                 'DHW Plant loop annual water (PS-H)'],
+  ['C',  'Total Energy Cost',    '$',        'User input rates',              'Σ(fuel × $/unit) from rate schedules'],
+  ['C',  'ECI',                  '$/ft²',    'Calculated',                   'Total Cost ÷ Conditioned Floor Area'],
+  ['C',  'Elec Rate',            '$/kBtu',   'User input',                   'Utility electricity rate applied to PS-B'],
+  ['C',  'Gas Rate',             '$/kBtu',   'User input',                   'Utility gas rate applied to PS-B'],
+  ['C',  'Add. Fuel Rate',       '$/kBtu',   'User input',                   'Additional fuel rate'],
+  ['C',  'DC Rate',              '$/kBtu',   'User input',                   'District cooling rate'],
+  ['C',  'DH Rate',              '$/kBtu',   'User input',                   'District heating rate'],
+  ['CO', 'Total Carbon',         'kg CO2e',  'User emission factors',         'Σ(fuel × kg CO2e/unit)'],
+  ['CO', 'Carbon Intensity',     'kg/ft²',   'Calculated',                   'Total Carbon ÷ Conditioned Floor Area'],
+  ['CO', 'Elec Carbon Factor',   'kg/kBtu',  'User input',                   'Grid emission factor for electricity'],
+  ['CO', 'Gas Carbon Factor',    'kg/kBtu',  'User input',                   'Natural gas emission factor'],
+  ['CO', 'Add. Fuel Factor',     'kg/kBtu',  'User input',                   'Additional fuel emission factor'],
+  ['CO', 'DC Carbon Factor',     'kg/kBtu',  'User input',                   'District cooling emission factor'],
+  ['CO', 'DH Carbon Factor',     'kg/kBtu',  'User input',                   'District heating emission factor'],
+  ['P',  'Peak Heating',         'kBtuh',    'REPORT- LS-A',                 'Max zone heating load sum or system design peak'],
+  ['P',  'Peak Htg Intensity',   'Btuh/ft²', 'Calculated',                   'Peak Heating ÷ Conditioned Area × 1,000'],
+  ['P',  'Peak Htg Hour',        '',         'REPORT- LS-A',                 'Mon/Day/Hour of peak heating occurrence'],
+  ['P',  'Peak Cooling',         'kBtuh',    'REPORT- LS-A',                 'Max zone cooling load sum or system design peak'],
+  ['P',  'Peak Clg Intensity',   'Btuh/ft²', 'Calculated',                   'Peak Cooling ÷ Conditioned Area × 1,000'],
+  ['P',  'Peak Clg Hour',        '',         'REPORT- LS-A',                 'Mon/Day/Hour of peak cooling occurrence'],
+  ['P',  'Peak Elec Load',       'W',        'REPORT- PS-B',                 'EM1 MAX KW × 1,000'],
+  ['P',  'Peak Elec Intensity',  'W/ft²',    'Calculated',                   'Peak Elec Load ÷ Conditioned Area'],
+  ['P',  'Peak Elec Hour',       '',         'REPORT- PS-B',                 'EM1 MAX KW DAY/HR'],
+  ['GE', 'Conditioned Area',     'ft²',      'REPORT- LV-B',                 'Building Totals conditioned floor area'],
+  ['GE', 'Total Floor Area',     'ft²',      'REPORT- LV-B',                 'Building Totals gross floor area'],
+  ['GE', 'Gross Wall Area',      'ft²',      'REPORT- LV-N',                 'Total exterior wall area (all orientations)'],
+  ['GE', 'AG Gross Wall',        'ft²',      'REPORT- LV-N',                 'Above-grade gross wall area'],
+  ['GE', 'AG North Wall',        'ft²',      'REPORT- LV-N',                 'Above-grade north-facing wall area'],
+  ['GE', 'AG East Wall',         'ft²',      'REPORT- LV-N',                 'Above-grade east-facing wall area'],
+  ['GE', 'AG South Wall',        'ft²',      'REPORT- LV-N',                 'Above-grade south-facing wall area'],
+  ['GE', 'AG West Wall',         'ft²',      'REPORT- LV-N',                 'Above-grade west-facing wall area'],
+  ['GE', 'N WWR Nominal',        '%',        'REPORT- LV-N',                 'North window-to-wall ratio (code/nominal)'],
+  ['GE', 'E WWR Nominal',        '%',        'REPORT- LV-N',                 'East window-to-wall ratio (code/nominal)'],
+  ['GE', 'S WWR Nominal',        '%',        'REPORT- LV-N',                 'South window-to-wall ratio (code/nominal)'],
+  ['GE', 'W WWR Nominal',        '%',        'REPORT- LV-N',                 'West window-to-wall ratio (code/nominal)'],
+  ['GE', 'Building WWR Actual',  '%',        'REPORT- LV-N',                 'Overall building WWR (modeled actual)'],
+  ['GE', 'N WWR Actual',         '%',        'REPORT- LV-N',                 'North facade modeled WWR'],
+  ['GE', 'E WWR Actual',         '%',        'REPORT- LV-N',                 'East facade modeled WWR'],
+  ['GE', 'S WWR Actual',         '%',        'REPORT- LV-N',                 'South facade modeled WWR'],
+  ['GE', 'W WWR Actual',         '%',        'REPORT- LV-N',                 'West facade modeled WWR'],
+  ['GE', 'Gross Roof Area',      'ft²',      'REPORT- LV-N',                 'Total roof/ceiling area'],
+  ['GE', 'Skylight Roof Ratio',  '%',        'REPORT- LV-N',                 'Skylight area ÷ Gross Roof Area'],
+  ['GE', 'Wall/Floor Ratio',     '',         'Calculated',                   'Gross Wall ÷ Conditioned Floor Area'],
+  ['GE', 'Roof/Floor Ratio',     '',         'Calculated',                   'Gross Roof ÷ Conditioned Floor Area'],
+  ['GE', 'Envelope/Floor Ratio', '',         'Calculated',                   '(Wall+Roof) ÷ Conditioned Floor Area'],
+  ['EN', 'N Shading Type',       '',         'BDL input / LV-N',             'North facade external shading descriptor'],
+  ['EN', 'N Shading Ratio',      '%',        'BDL input / LV-N',             'North shading projection ratio'],
+  ['EN', 'W Shading Type',       '',         'BDL input / LV-N',             'West facade external shading descriptor'],
+  ['EN', 'W Shading Ratio',      '%',        'BDL input / LV-N',             'West shading projection ratio'],
+  ['EN', 'S Shading Type',       '',         'BDL input / LV-N',             'South facade external shading descriptor'],
+  ['EN', 'S Shading Ratio',      '%',        'BDL input / LV-N',             'South shading projection ratio'],
+  ['EN', 'E Shading Type',       '',         'BDL input / LV-N',             'East facade external shading descriptor'],
+  ['EN', 'E Shading Ratio',      '%',        'BDL input / LV-N',             'East shading projection ratio'],
+  ['EN', 'Vert. Wtd U-Value',    'Btu/h·ft²·F','REPORT- LV-C',             'Area-weighted U across all above-grade walls+glazing'],
+  ['EN', 'Vert. Wtd R-Value',    'ft²·h·F/Btu','Calculated',               '1 ÷ Vertical Weighted U-Value'],
+  ['EN', 'Wall U-Value',         'Btu/h·ft²·F','REPORT- LV-C',             'Opaque wall construction U-value'],
+  ['EN', 'Wall 2 U-Value',       'Btu/h·ft²·F','REPORT- LV-C',             'Second wall type U-value (if applicable)'],
+  ['EN', 'Roof U-Value',         'Btu/h·ft²·F','REPORT- LV-C',             'Roof/ceiling construction U-value'],
+  ['EN', 'Exposed Floor U',      'Btu/h·ft²·F','REPORT- LV-C',             'Exposed floor U-value (over unconditioned)'],
+  ['EN', 'Slab-on-Grade U',      'Btu/h·ft²·F','REPORT- LV-C',             'Slab-on-grade F-factor converted to U'],
+  ['EN', 'Assembly U-Value',     'Btu/h·ft²·F','REPORT- LV-C',             'Overall opaque assembly area-weighted U'],
+  ['EN', 'Glass U-Value',        'Btu/h·ft²·F','REPORT- LV-C',             'Fenestration whole-window U-value'],
+  ['EN', 'Glass SHGC',           '',         'REPORT- LV-C',                 'Solar heat gain coefficient (whole window)'],
+  ['EN', 'Glass VLT',            '',         'REPORT- LV-C',                 'Visible light transmittance'],
+  ['EN', 'Glass LSG',            '',         'Calculated',                   'VLT ÷ SHGC (light-to-solar gain ratio)'],
+  ['EN', 'Infiltration Rate',    'CFM/ft²',  'REPORT- LV-C / BDL input',    'Design infiltration at facade (75 Pa or 0.3 in-wg)'],
+  ['L',  'LPD',                  'W/ft²',    'REPORT- LV-B / BDL input',    'Installed lighting power density (gross area)'],
+  ['L',  'Cond. LPD',            'W/ft²',    'REPORT- LV-B / BDL input',    'LPD based on conditioned area only'],
+  ['L',  'Occupant Density',     'ft²/person','REPORT- LV-B / BDL input',   'Gross area per occupant'],
+  ['L',  'Cond. Occ. Density',   'ft²/person','REPORT- LV-B / BDL input',   'Conditioned area per occupant'],
+  ['L',  'EPD',                  'W/ft²',    'REPORT- LV-B / BDL input',    'Equipment/plug-load power density (gross)'],
+  ['L',  'Cond. EPD',            'W/ft²',    'REPORT- LV-B / BDL input',    'EPD based on conditioned area only'],
+  ['A',  'Total Vent CFM',       'CFM',      'REPORT- SV-A',                 'Design outdoor air / supply airflow (all systems)'],
+  ['A',  'Vent/Area',            'CFM/ft²',  'Calculated',                   'Total Vent CFM ÷ Conditioned Floor Area'],
+  ['A',  'Total Htg Airflow',    'CFM',      'REPORT- SV-A',                 'Heating design supply airflow (all systems)'],
+  ['A',  'Htg Airflow/Area',     'CFM/ft²',  'Calculated',                   'Total Htg CFM ÷ Conditioned Floor Area'],
+  ['A',  'Total Clg Airflow',    'CFM',      'REPORT- SV-A',                 'Cooling design supply airflow (all systems)'],
+  ['A',  'Clg Airflow/Area',     'CFM/ft²',  'Calculated',                   'Total Clg CFM ÷ Conditioned Floor Area'],
+  ['S',  'Chiller COP',          'COP',      'REPORT- PS-C / PV-A',          'Rated chiller COP (or input EIR→COP)'],
+  ['S',  'Boiler Efficiency',    'COP',      'REPORT- PS-C / PV-A',          'Boiler thermal efficiency (annual or rated)'],
+  ['S',  'DX Cooling COP',       'COP',      'REPORT- SV-A',                 'DX cooling rated COP (if applicable)'],
+  ['S',  'DX Heating HSPF',      'HSPF',     'REPORT- SV-A',                 'DX heat pump heating HSPF (if applicable)'],
+  ['S',  'HP Cooling COP',       'COP',      'REPORT- SV-A',                 'Heat pump cooling rated COP'],
+  ['S',  'HP Heating COP',       'COP',      'REPORT- SV-A',                 'Heat pump heating rated COP'],
+  ['S',  'Total Fan Power',      'kW',       'REPORT- SV-A / SS-R',          'Sum of all supply/return fan design kW'],
+  ['S',  'Total Pump Power',     'kW',       'REPORT- PV-A / SS-R',          'Sum of all HW/CHW pump design kW'],
+  ['S',  'SHW Thermal Eff.',     'COP',      'REPORT- PS-H',                 'DHW plant annual thermal efficiency'],
+  ['S',  'Ext Lighting',         'kW',       'BDL input / REPORT- LV-B',    'Exterior lighting installed power'],
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  DATA ROWS
+//  Order of values must match COLS array above (index 0 = Option, etc.)
+// ═══════════════════════════════════════════════════════════════
+function fmt(v) {
+  if (v === null || v === '' || v === undefined) return null;
+  return v;
+}
+const N = null;
+
+const BL_ROWS = [
+  {
+    label:'LEED Baseline', cls:'',
+    vals: [
+      'LEED Baseline','MSU Energy Model_LEED_0 - Baseline Design.SIM','5/06/2026 21:42:44','Baltimore MD TMY2','4A',
+      1342,648,
+      32420600,122.1,32400000,0,N,N,N,
+      11180000,0,N,N,4119000,N,
+      2580000,0,7090000,0,N,N,
+      2987000,3803000,275200,N,N,387700,0,N,N,
+      N,N,N,N,
+      1380000,5.19,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      6004.2,22.62,'JAN 15 08:00',10824.8,40.78,'JUL 24 13:00',4689846,17.67,'Hour 3',
+      265425,265425,92288.6,92288.6,7945.1,8754.6,2730.9,1050.0,
+      N,N,N,N,34.83,38.34,37.05,51.99,37.73,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.192,5.208,0.062,N,0.047,N,0.027,0.079,0.435,0.878,0.900,1.025,0.03916,
+      1.1876,1.1908,92.51,92.26,2.480,2.487,
+      253316,0.9544,253316,0.9544,253316,0.9544,
+      5,0.9799,N,N,N,N,329.33,228.13,1,N,
+    ]
+  },
+  {
+    label:'LEED Baseline 90°', cls:'',
+    vals: [
+      'LEED Baseline 90°','MSU Energy Model_LEED_90 - Baseline Design.SIM','5/06/2026 22:41:19','Baltimore MD TMY2','4A',
+      2220,709,
+      32022500,120.6,32022000,0,N,N,N,
+      9115000,0,N,N,4464000,N,
+      2580000,0,7093000,0,N,N,
+      4153000,3939000,290700,N,N,387700,0,N,N,
+      N,N,N,N,
+      1360474,5.13,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      3786.4,14.27,'JAN 15 08:00',10987.0,41.39,'JUL 24 13:00',4827222,18.19,'Hour 9',
+      265425,265425,92288.6,92288.6,14581.7,4598.8,8754.6,2731.0,
+      N,N,N,N,34.83,31.96,38.01,37.05,51.99,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.192,5.208,0.062,N,0.047,N,0.027,0.079,0.435,0.878,0.900,1.025,0.03916,
+      1.1876,1.1908,92.51,92.26,2.480,2.487,
+      250322,0.9431,250322,0.9431,250322,0.9431,
+      5,0.9799,N,N,N,N,455.34,234.07,1,N,
+    ]
+  },
+  {
+    label:'LEED Baseline 180°', cls:'',
+    vals: [
+      'LEED Baseline 180°','MSU Energy Model_LEED_180 - Baseline Design.SIM','5/06/2026 22:49:58','Baltimore MD TMY2','4A',
+      2178,743,
+      32152800,121.1,32153000,0,N,N,N,
+      9174000,0,N,N,4491000,N,
+      2580000,0,7093000,0,N,N,
+      4184000,3950000,292800,N,N,387700,0,N,N,
+      N,N,N,N,
+      1366011,5.15,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      3815.0,14.37,'JAN 15 08:00',11146.5,42.00,'JUL 24 13:00',4325164,16.30,'Hour 2/26',
+      265425,265425,92288.7,92288.7,3880.1,1050.0,4598.8,8754.6,
+      N,N,N,N,34.83,43.67,37.73,38.01,37.05,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.192,5.208,0.062,N,0.047,N,0.027,0.079,0.435,0.878,0.900,1.025,0.03916,
+      1.1876,1.1908,92.51,92.26,2.480,2.487,
+      252037,0.9496,252037,0.9496,252037,0.9496,
+      5,0.9799,N,N,N,N,457.76,234.76,1,N,
+    ]
+  },
+  {
+    label:'LEED Baseline 270°', cls:'',
+    vals: [
+      'LEED Baseline 270°','MSU Energy Model_LEED_270 - Baseline Design.SIM','5/06/2026 22:55:46','Baltimore MD TMY2','4A',
+      2243,683,
+      32104300,121.0,32104000,0,N,N,N,
+      9165000,0,N,N,4472000,N,
+      2580000,0,7093000,0,N,N,
+      4173000,3942000,291000,N,N,387700,0,N,N,
+      N,N,N,N,
+      1363952,5.14,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      3805.3,14.34,'JAN 15 08:00',11004.1,41.46,'JUL 24 13:00',4600541,17.33,'Hour 9',
+      265425,265425,92288.7,92288.7,19140.1,2731.0,1050.0,4598.8,
+      N,N,N,N,34.83,33.80,51.99,37.73,38.01,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.192,5.208,0.062,N,0.047,N,0.027,0.079,0.435,0.878,0.900,1.025,0.03916,
+      1.1876,1.1908,92.51,92.26,2.480,2.487,
+      250419,0.9435,250419,0.9435,250419,0.9435,
+      5,0.9799,N,N,N,N,455.81,234.14,1,N,
+    ]
+  },
+  {
+    label:'Compliance Baseline', cls:'',
+    vals: [
+      'Compliance Baseline','MSU Energy Model_Compliance_0 - Baseline Design.SIM','5/06/2026 14:56:30','Baltimore MD TMY2','4A',
+      1339,512,
+      38537700,145.2,38500000,0,N,N,N,
+      10470000,0,N,N,5864000,N,
+      2490000,0,7090000,0,N,N,
+      7695000,4204000,335200,N,N,387700,0,N,N,
+      N,N,N,N,
+      1640000,6.17,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      5948.3,22.41,'JAN 15 08:00',13320.5,50.19,'JUL 24 10:00',4906833,18.49,'Hour 10/19',
+      265425,265425,92288.6,92288.6,7945.1,8754.6,2731.0,1050.0,
+      N,N,N,N,34.83,38.34,37.05,51.99,37.73,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.267,3.745,0.118,N,0.061,N,0.027,0.105,0.487,0.878,0.900,1.025,0.03916,
+      1.1446,1.1578,92.51,91.46,2.480,2.509,
+      256283,0.9656,256283,0.9656,256283,0.9656,
+      4.405,0.9799,N,N,N,N,919.25,247.54,1,N,
+    ]
+  },
+  {
+    label:'Compliance 90°', cls:'',
+    vals: [
+      'Compliance 90°','MSU Energy Model_Compliance_90 - Baseline Design.SIM','5/06/2026 13:25:42','Baltimore MD TMY2','4A',
+      1373,576,
+      38144500,143.7,38144000,0,N,N,N,
+      10350000,0,N,N,5776000,N,
+      2487000,0,7093000,0,N,N,
+      7549000,4170000,330000,N,N,387700,0,N,N,
+      N,N,N,N,
+      1620569,6.11,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      5844.6,22.02,'JAN 15 08:00',12902.2,48.61,'JUL 24 10:00',4905025,18.48,'Hour 7/15',
+      265425,265425,92288.6,92288.6,14581.7,4598.8,8754.6,2731.0,
+      N,N,N,N,34.83,31.96,38.01,37.05,51.99,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.267,3.745,0.118,N,0.061,N,0.027,0.105,0.487,0.878,0.900,1.025,0.03916,
+      1.1446,1.1578,92.51,91.46,2.480,2.509,
+      252492,0.9513,252492,0.9513,252492,0.9513,
+      4.405,0.9799,N,N,N,N,905.92,245.69,1,N,
+    ]
+  },
+  {
+    label:'Compliance 180°', cls:'',
+    vals: [
+      'Compliance 180°','MSU Energy Model_Compliance_180 - Baseline Design.SIM','5/06/2026 13:30:28','Baltimore MD TMY2','4A',
+      1317,589,
+      38361100,144.5,38361000,0,N,N,N,
+      10450000,0,N,N,5817000,N,
+      2487000,0,7093000,0,N,N,
+      7611000,4186000,332800,N,N,387700,0,N,N,
+      N,N,N,N,
+      1629770,6.14,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      5929.9,22.34,'JAN 15 08:00',13278.2,50.03,'JUL 24 10:00',4757815,17.93,'Hour 5',
+      265425,265425,92288.7,92288.7,3880.1,1050.0,4598.8,8754.6,
+      N,N,N,N,34.83,43.67,37.73,38.01,37.05,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.267,3.745,0.118,N,0.061,N,0.027,0.105,0.487,0.878,0.900,1.025,0.03916,
+      1.1446,1.1578,92.51,91.46,2.480,2.509,
+      254822,0.9601,254822,0.9601,254822,0.9601,
+      4.405,0.9799,N,N,N,N,912.30,246.71,1,N,
+    ]
+  },
+  {
+    label:'Compliance 270°', cls:'',
+    vals: [
+      'Compliance 270°','MSU Energy Model_Compliance_270 - Baseline Design.SIM','5/06/2026 13:34:11','Baltimore MD TMY2','4A',
+      1304,561,
+      38271800,144.2,38272000,0,N,N,N,
+      10420000,0,N,N,5791000,N,
+      2487000,0,7093000,0,N,N,
+      7591000,4174000,330700,N,N,387700,0,N,N,
+      N,N,N,N,
+      1625978,6.13,0.0425,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      5857.7,22.07,'JAN 15 08:00',12950.2,48.79,'JUL 24 10:00',4911153,18.50,'Hour 7/15',
+      265425,265425,92288.7,92288.7,19140.1,2731.0,1050.0,4598.8,
+      N,N,N,N,34.83,33.80,51.99,37.73,38.01,
+      274038.8,0.796,0.3477,1.0325,1.3802,
+      N,N,N,N,N,N,N,N,
+      0.267,3.745,0.118,N,0.061,N,0.027,0.105,0.487,0.878,0.900,1.025,0.03916,
+      1.1446,1.1578,92.51,91.46,2.480,2.509,
+      252774,0.9523,252774,0.9523,252774,0.9523,
+      4.405,0.9799,N,N,N,N,907.65,245.85,1,N,
+    ]
+  },
+];
+
+const PROPOSED_ROWS = [
+  {
+    label:'Proposed Design', cls:'proposed',
+    vals: [
+      'Proposed Design','MSU Energy Model_Proposed - Baseline Design.SIM','5/06/2026 21:15:46','Baltimore MD TMY2','4A',
+      1076,659,
+      25583100,96.1,25583000,0,N,N,N,
+      1397000,0,N,N,3678000,N,
+      1758000,0,7104000,0,N,N,
+      10080000,1066000,N,N,N,495500,0,N,N,
+      N,N,N,N,
+      1090000,4.08,0.04,0,N,N,N,
+      N,N,N,N,N,N,N,
+      N,N,N,N,N,N,N,
+      4816.2,18.1,'JAN 20 08:00',12469,46.8,'JUL 24 10:00',3048247,11.45,'Hour 7/24',
+      265425,265425,92070,92070,7945,8755,2731,1050,
+      N,N,N,N,34.53,36.19,37.05,51.99,37.73,
+      274024,1.0,0.300,1.032,1.380,
+      N,N,N,N,N,N,N,N,
+      0.236,4.24,0.054,N,0.042,N,0.027,0.086,0.526,0.408,0.517,1.27,0.03906,
+      0.810,0.820,92.86,91.38,2.47,2.51,
+      344150,1.2931,344150,1.2931,344150,1.2931,
+      2.795,0.9774,N,N,N,N,1090.29,504.65,1,N,
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+function numFmt(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'string') return v;
+  if (Math.abs(v) >= 1e6)  return v.toLocaleString('en-US', {maximumFractionDigits:0});
+  if (Math.abs(v) >= 1000) return v.toLocaleString('en-US', {maximumFractionDigits:0});
+  if (Math.abs(v) >= 10)   return v.toLocaleString('en-US', {maximumFractionDigits:2});
+  if (Math.abs(v) >= 1)    return v.toLocaleString('en-US', {maximumFractionDigits:3});
+  return v.toLocaleString('en-US', {maximumFractionDigits:5});
+}
+
+function buildGroupSpans(cols) {
+  const spans = [];
+  let cur = null, count = 0;
+  for (const [g] of cols) {
+    if (g === cur) { count++; }
+    else { if (cur) spans.push({g:cur, count}); cur=g; count=1; }
+  }
+  if (cur) spans.push({g:cur, count});
+  return spans;
+}
+
+function buildTable(tableEl, rows, cols) {
+  tableEl.innerHTML = '';
+  const spans = buildGroupSpans(cols);
+
+  // ── Group header row ──
+  const hg = tableEl.createTHead().insertRow();
+  // sticky label column
+  const th0 = document.createElement('th');
+  th0.style.cssText = 'background:#1c2833;position:sticky;left:0;z-index:20;min-width:160px;';
+  th0.textContent = 'Option';
+  hg.appendChild(th0);
+  for (const {g, count} of spans) {
+    const th = document.createElement('th');
+    th.colSpan = count;
+    th.style.background = GROUPS[g].color;
+    th.textContent = GROUPS[g].label;
+    hg.appendChild(th);
+  }
+  hg.className = 'group-row';
+
+  // ── Column label row ──
+  const hr = document.createElement('tr');
+  hr.className = 'col-row';
+  const th00 = document.createElement('th');
+  th00.style.cssText = 'background:#2c3e50;color:#fff;position:sticky;left:0;z-index:20;';
+  hr.appendChild(th00);
+  cols.forEach(([g, label, unit, simReport, simMethod], i) => {
+    const th = document.createElement('th');
+    th.style.background = GROUPS[g].color + 'cc';
+    th.setAttribute('data-tip', `SIM Source: ${simReport}\n${simMethod}`);
+    th.innerHTML = label + (unit ? `<br><small style="font-weight:400;color:#777">${unit}</small>` : '') +
+      `<span class="sim-src">${simReport.split('·')[0].trim()}</span>`;
+    hr.appendChild(th);
+  });
+  tableEl.querySelector('thead').appendChild(hr);
+
+  // ── Data rows ──
+  const tbody = tableEl.createTBody();
+  for (const row of rows) {
+    const tr = tbody.insertRow();
+    if (row.cls) tr.className = row.cls;
+    const td0 = tr.insertCell();
+    td0.textContent = row.label;
+
+    row.vals.forEach((v, i) => {
+      const td = tr.insertCell();
+      const fv = numFmt(v);
+      if (fv === null) { td.innerHTML = '<span style="color:#ccc">—</span>'; }
+      else { td.textContent = fv; }
+    });
+  }
+}
+
+function buildMappingIndex(cols) {
+  const tbody = document.getElementById('mappingBody');
+  cols.forEach(([g, label, unit, simReport, simMethod], i) => {
+    const tr = document.createElement('tr');
+    tr.style.background = (i%2===0) ? '#f9f9f9' : '#fff';
+    tr.innerHTML = `
+      <td style="padding:6px 12px;color:#888;">${i+1}</td>
+      <td style="padding:6px 12px;font-weight:600;border-left:4px solid ${GROUPS[g].color}">${label}</td>
+      <td style="padding:6px 12px;color:#666;font-style:italic;">${unit||'—'}</td>
+      <td style="padding:6px 12px;"><strong>${simReport}</strong></td>
+      <td style="padding:6px 12px;color:#444;">${simMethod}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  buildTable(document.getElementById('tblBL'), BL_ROWS, COLS);
+  buildTable(document.getElementById('tblProposed'), PROPOSED_ROWS, COLS);
+  buildMappingIndex(COLS);
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleRef() {
+  const p = document.getElementById('refPanel');
+  const btn = document.querySelector('.ref-toggle');
+  p.classList.toggle('open');
+  btn.textContent = p.classList.contains('open') ? '▲ SIM Reference' : '▼ SIM Reference';
+}
+</script>
+</body>
+</html>
