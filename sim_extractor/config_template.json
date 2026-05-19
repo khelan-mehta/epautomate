@@ -1,0 +1,23 @@
+{
+  "runs": [
+    {
+      "sim_file": "path/to/baseline.SIM",
+      "tab": "bl",
+      "option_name": "LEED Baseline",
+      "climate_zone": "4A"
+    },
+    {
+      "sim_file": "path/to/proposed.SIM",
+      "tab": "proposed",
+      "option_name": "Proposed Design",
+      "climate_zone": "4A"
+    }
+  ],
+  "output": "energy_results.xlsx",
+  "rates": {
+    "electricity_per_kbtu": 0.042497069,
+    "gas_per_kbtu": 0.0,
+    "elec_carbon_kg_per_kbtu": 0.0,
+    "gas_carbon_kg_per_kbtu": 0.0
+  }
+}

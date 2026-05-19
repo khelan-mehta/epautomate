@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+test_output.xlsx
+*.xlsx
+!templates/*.xlsx
