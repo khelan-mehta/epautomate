@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>epautomate — How It Works</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+    background: #ececec; color: #222; font-size: 11pt; line-height: 1.45;
+  }
+  .page {
+    width: 210mm; min-height: 297mm; padding: 18mm 20mm;
+    margin: 12mm auto; background: #fff;
+    box-shadow: 0 4px 18px rgba(0,0,0,.15);
+    position: relative; page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* Header */
+  .hdr {
+    display: flex; align-items: center; gap: 14px;
+    border-bottom: 3px solid #e67e22; padding-bottom: 10px; margin-bottom: 14px;
+  }
+  .hdr .logo {
+    width: 42px; height: 42px; border-radius: 8px;
+    background: linear-gradient(135deg, #1a252f, #e67e22);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px;
+  }
+  .hdr h1 { font-size: 18pt; color: #1a252f; letter-spacing: .3px; }
+  .hdr .sub { font-size: 9pt; color: #777; margin-top: 2px; }
+  .hdr .pgnum {
+    margin-left: auto; background: #1a252f; color: #fff;
+    padding: 3px 10px; border-radius: 4px; font-size: 9pt; font-weight: 600;
+  }
+
+  h2 {
+    font-size: 12pt; color: #c0392b; margin: 14px 0 6px;
+    border-left: 4px solid #e67e22; padding-left: 8px;
+  }
+  h3 { font-size: 10.5pt; color: #1a5276; margin: 10px 0 4px; }
+  p { margin-bottom: 6px; }
+
+  /* Two-column layout */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* Boxes */
+  .box {
+    background: #f8f9fa; border-left: 3px solid #2471a3;
+    padding: 8px 10px; border-radius: 0 4px 4px 0; margin: 6px 0;
+  }
+  .box.warn { border-color: #c0392b; background: #fdedec; }
+  .box.tip  { border-color: #16a085; background: #e8f8f5; }
+
+  /* Code */
+  code, pre {
+    font-family: 'Consolas', 'Monaco', monospace; font-size: 9.5pt;
+    background: #2c3e50; color: #ecf0f1; border-radius: 3px;
+  }
+  code { padding: 1px 5px; }
+  pre {
+    padding: 8px 12px; margin: 6px 0; overflow-x: auto;
+    border-left: 3px solid #e67e22; line-height: 1.5;
+  }
+  pre .c  { color: #95a5a6; font-style: italic; }
+  pre .k  { color: #f39c12; font-weight: 600; }
+  pre .s  { color: #2ecc71; }
+  pre .v  { color: #5dade2; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex; align-items: stretch; gap: 4px; margin: 10px 0;
+    flex-wrap: nowrap;
+  }
+  .flow .step {
+    flex: 1; background: #fff; border: 1.5px solid #ccc;
+    border-radius: 6px; padding: 8px 6px; text-align: center;
+    font-size: 9pt; line-height: 1.3; position: relative;
+  }
+  .flow .step .ic {
+    display: block; font-size: 18px; margin-bottom: 3px;
+  }
+  .flow .step .lbl { font-weight: 700; color: #1a252f; }
+  .flow .step .desc { color: #666; font-size: 8pt; margin-top: 2px; }
+  .flow .arrow {
+    align-self: center; color: #e67e22; font-size: 20px; font-weight: 800;
+  }
+  .flow .step.s1 { border-color: #2471a3; background: #d4e6f1; }
+  .flow .step.s2 { border-color: #d35400; background: #fdebd0; }
+  .flow .step.s3 { border-color: #1e8449; background: #d5f5e3; }
+  .flow .step.s4 { border-color: #7d3c98; background: #e8daef; }
+
+  /* Tables */
+  table {
+    width: 100%; border-collapse: collapse; font-size: 9pt; margin: 6px 0;
+  }
+  th {
+    background: #1a252f; color: #fff; text-align: left;
+    padding: 5px 8px; font-weight: 600;
+  }
+  td {
+    padding: 4px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  td.tag {
+    font-family: 'Consolas', monospace; font-size: 8.5pt;
+    color: #c0392b; font-weight: 600; white-space: nowrap;
+  }
+
+  /* Section list */
+  ul.checklist { list-style: none; padding: 0; }
+  ul.checklist li {
+    padding: 3px 0 3px 22px; position: relative; font-size: 10pt;
+  }
+  ul.checklist li::before {
+    content: '✓'; position: absolute; left: 0; top: 2px;
+    color: #16a085; font-weight: 800; font-size: 12pt;
+  }
+
+  ul.bullet { padding-left: 18px; }
+  ul.bullet li { margin: 2px 0; font-size: 10pt; }
+
+  /* Footer */
+  .footer {
+    position: absolute; bottom: 8mm; left: 20mm; right: 20mm;
+    border-top: 1px solid #ccc; padding-top: 5px;
+    font-size: 8pt; color: #888; display: flex; justify-content: space-between;
+  }
+
+  /* Sticky highlight */
+  .kv {
+    display: inline-block; background: #fef9e7; border: 1px solid #f1c40f;
+    padding: 1px 6px; border-radius: 3px; font-size: 9pt;
+    font-family: 'Consolas', monospace;
+  }
+
+  .pill {
+    display: inline-block; padding: 1px 7px; border-radius: 10px;
+    font-size: 8.5pt; font-weight: 600; color: #fff;
+  }
+  .pill.in  { background: #2471a3; }
+  .pill.out { background: #16a085; }
+  .pill.cfg { background: #e67e22; }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ PAGE 1 ═══════════════════════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo">⚡</div>
+    <div>
+      <h1>epautomate — SIM&nbsp;→&nbsp;Excel Extractor</h1>
+      <div class="sub">Automated DOE-2.2 energy model results aggregation · How It Works</div>
+    </div>
+    <div class="pgnum">Page 1 / 2</div>
+  </div>
+
+  <h2>What problem does this solve?</h2>
+  <p>
+    DOE-2.2 (eQUEST) emits results as plain-text <code>.SIM</code> files —
+    roughly 130,000 lines per run, organized into ~50 numbered reports. Energy
+    modelers manually copy values from these reports into Excel comparison
+    sheets for LEED, ASHRAE 90.1, and code-compliance submittals. A single
+    project produces 8+ baseline rotations plus a proposed design, meaning
+    nearly 1,000 manual lookups per submittal cycle.
+  </p>
+  <p>
+    <strong>epautomate</strong> reads each <code>.SIM</code> file, locates the
+    relevant report sections, extracts ~120 metrics, and writes a fully
+    formatted Excel workbook with <span class="kv">BL Data</span> and
+    <span class="kv">Proposed Data</span> tabs in seconds.
+  </p>
+
+  <h2>Pipeline overview</h2>
+  <div class="flow">
+    <div class="step s1">
+      <span class="ic">📄</span>
+      <div class="lbl">.SIM files</div>
+      <div class="desc">DOE-2.2 plain-text output</div>
+    </div>
+    <div class="arrow">▶</div>
+    <div class="step s2">
+      <span class="ic">🔍</span>
+      <div class="lbl">SIMParser</div>
+      <div class="desc">Regex + section locators</div>
+    </div>
+    <div class="arrow">▶</div>
+    <div class="step s3">
+      <span class="ic">📊</span>
+      <div class="lbl">Aggregator</div>
+      <div class="desc">Convert &amp; compute derived</div>
+    </div>
+    <div class="arrow">▶</div>
+    <div class="step s4">
+      <span class="ic">📗</span>
+      <div class="lbl">ExcelWriter</div>
+      <div class="desc">openpyxl formatted output</div>
+    </div>
+  </div>
+
+  <h2>Repository layout</h2>
+<pre><span class="c"># /home/user/epautomate/</span>
+sim_extractor/
+├── <span class="k">sim_parser.py</span>       <span class="c"># SIMParser class — one parse_xxx() per report</span>
+├── <span class="k">excel_writer.py</span>     <span class="c"># openpyxl — color-coded headers, frozen panes</span>
+├── <span class="k">run.py</span>              <span class="c"># CLI entry point (--bl, --proposed, --config)</span>
+└── <span class="k">config_template.json</span> <span class="c"># JSON spec for batch runs + cost/carbon rates</span>
+requirements.txt          <span class="c"># openpyxl&gt;=3.1.0   (the only dependency)</span>
+docs/how-it-works.html    <span class="c"># this document</span>
+sim_excel_mapping.html    <span class="c"># interactive column→SIM-report mapping reference</span></pre>
+
+  <h2>Two ways to invoke it</h2>
+  <div class="cols">
+    <div>
+      <h3><span class="pill in">CLI</span> &nbsp; ad-hoc runs</h3>
+<pre><span class="k">python</span> sim_extractor/run.py \
+  --bl baseline_0.SIM baseline_90.SIM \
+  --proposed proposed.SIM \
+  --option <span class="s">"LEED Baseline"</span> \
+  --output <span class="s">results.xlsx</span></pre>
+    </div>
+    <div>
+      <h3><span class="pill cfg">Config</span> &nbsp; reproducible batch</h3>
+<pre>{
+  <span class="v">"runs"</span>: [
+    {<span class="v">"sim_file"</span>: <span class="s">"sim/baseline_0.SIM"</span>,
+     <span class="v">"tab"</span>: <span class="s">"bl"</span>,
+     <span class="v">"option_name"</span>: <span class="s">"LEED Baseline"</span>},
+    {<span class="v">"sim_file"</span>: <span class="s">"sim/proposed.SIM"</span>,
+     <span class="v">"tab"</span>: <span class="s">"proposed"</span>,
+     <span class="v">"option_name"</span>: <span class="s">"Proposed Design"</span>}
+  ],
+  <span class="v">"output"</span>: <span class="s">"results.xlsx"</span>,
+  <span class="v">"rates"</span>: { <span class="v">"electricity_per_kbtu"</span>: <span class="v">0.0425</span> }
+}</pre>
+    </div>
+  </div>
+
+  <h2>What gets parsed from each SIM report</h2>
+  <table>
+    <thead>
+      <tr><th>SIM Report</th><th>What we pull</th><th>Excel columns it feeds</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="tag">file header</td><td>Project name, timestamp, weather file</td><td>Option, Results Path, Climate File</td></tr>
+      <tr><td class="tag">PS-B</td><td>EM1 annual KWH &amp; peak KW · FM1 annual THERM</td><td>Electricity, Gas, Peak Electrical Load</td></tr>
+      <tr><td class="tag">PS-E (Elec/Fuel)</td><td>13-column annual end-use breakdown</td><td>Htg/Clg/Lighting/Equip/Fans/Pumps/DHW etc.</td></tr>
+      <tr><td class="tag">SS-D</td><td>Building peak heating &amp; cooling loads + times</td><td>Peak Heating, Peak Cooling, Peak Hours</td></tr>
+      <tr><td class="tag">SS-R (×N)</td><td>Sum of ZONE UNDER HEATED / UNDER COOLED across all systems</td><td>Heating / Cooling Unmet Hours</td></tr>
+      <tr><td class="tag">LV-B</td><td>Per-space area, LPD, EPD, people count → weighted averages</td><td>Conditioned Area, LPD, EPD, Occupant Density</td></tr>
+      <tr><td class="tag">LV-C</td><td>Window U / SC / VLT — area-weighted across all windows</td><td>Glass U-Value, SHGC (=SC×0.87), VLT, LSG</td></tr>
+      <tr><td class="tag">SV-A</td><td>Design supply CFM, fan kW, DX cooling/heating EIR→COP</td><td>Total Airflow, Fan Power, DX COP</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span><strong>epautomate</strong> · DOE-2.2 results automation</span>
+    <span>Branch: claude/html-excel-file-mapping-tEHZn</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PAGE 2 ═══════════════════════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo">⚡</div>
+    <div>
+      <h1>epautomate — Inside the Parser</h1>
+      <div class="sub">Section-locator strategy, derived metrics, and verification</div>
+    </div>
+    <div class="pgnum">Page 2 / 2</div>
+  </div>
+
+  <h2>Parsing strategy</h2>
+  <p>
+    Each SIM report begins with a marker line like
+    <code>REPORT- PS-B Utility and Fuel Use Summary</code>. The parser:
+  </p>
+  <ol style="padding-left:22px; font-size:10pt;">
+    <li><strong>Locates</strong> the section by scanning for its <code>REPORT-&nbsp;XX-Y</code> marker.</li>
+    <li><strong>Reads forward</strong> to the next <code>REPORT-</code> line (or to a known end-of-section sentinel like <code>=======</code>).</li>
+    <li><strong>Splits</strong> fixed-width columns using whitespace tokenization — DOE-2 uses column-aligned text, never tabs.</li>
+    <li><strong>Handles continuation pages</strong>: many reports break across pages with a <code>(CONTINUED)</code> header — the parser stitches them back together before splitting.</li>
+    <li><strong>Sums across instances</strong> for per-system reports (SS-R, SV-A): walks every occurrence and totals the relevant columns.</li>
+  </ol>
+
+  <h2>Unit conversion table (applied during extraction)</h2>
+  <div class="col-3">
+    <div class="box"><strong>kWh → kBtu</strong><br>multiply by <span class="kv">3.412</span></div>
+    <div class="box"><strong>Therms → kBtu</strong><br>multiply by <span class="kv">100</span></div>
+    <div class="box"><strong>MBTU → kBtu</strong><br>multiply by <span class="kv">1,000</span></div>
+    <div class="box"><strong>kW → W</strong><br>multiply by <span class="kv">1,000</span></div>
+    <div class="box"><strong>Shading Coeff → SHGC</strong><br>multiply by <span class="kv">0.87</span></div>
+    <div class="box"><strong>EIR → COP</strong><br>divide <span class="kv">1 / EIR</span></div>
+  </div>
+
+  <h2>Derived metrics (computed, not parsed)</h2>
+  <table>
+    <thead><tr><th>Metric</th><th>Formula</th></tr></thead>
+    <tbody>
+      <tr><td>Energy Use Intensity</td><td><code>Total Energy ÷ Conditioned Floor Area</code></td></tr>
+      <tr><td>Conditioned Area</td><td>Σ(area) of LV-B spaces where <code>LIGHTS &gt; 0</code> (excludes plenums)</td></tr>
+      <tr><td>Glass LSG</td><td><code>VLT ÷ SHGC</code> — light-to-solar-gain ratio</td></tr>
+      <tr><td>Wall / Roof / Envelope Ratios</td><td>Surface area ÷ Conditioned Floor Area</td></tr>
+      <tr><td>Vertical R-Value</td><td><code>1 ÷ U-Value (area-weighted)</code></td></tr>
+      <tr><td>Total Energy Cost</td><td>Σ(kBtu × $/kBtu) using rates from config</td></tr>
+      <tr><td>Total Carbon Emissions</td><td>Σ(kBtu × kg CO₂e/kBtu) using factors from config</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Excel output formatting</h2>
+  <ul class="checklist">
+    <li><strong>Two sheets:</strong> <span class="kv">BL Data</span> (baseline runs) and <span class="kv">Proposed Data</span> (proposed designs).</li>
+    <li><strong>Color-coded headers</strong> by category: blue=ID, green=energy, orange=end-use, teal=peaks, lime=geometry, red=systems.</li>
+    <li><strong>Frozen top row + frozen first column</strong> so you can scroll the wide table without losing context.</li>
+    <li><strong>Number formats applied</strong>: integers for kBtu totals, 2-decimal for intensities, percentages for WWR.</li>
+    <li><strong>Append-friendly</strong>: re-running with new SIM files adds rows to existing sheets when <code>--output</code> points to an existing file.</li>
+  </ul>
+
+  <h2>Verification against a known SIM file</h2>
+  <p>
+    The parser was verified against the bundled MSU Energy Model baseline run.
+    Expected values from manual inspection of PS-B and SS-D matched extracted
+    values exactly:
+  </p>
+  <table>
+    <thead><tr><th>Metric</th><th>Expected (manual)</th><th>Extracted</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>Electricity (kBtu)</td><td>4,941,780</td><td>4,941,412</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+      <tr><td>Gas (kBtu)</td><td>2,577,100</td><td>2,577,100</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+      <tr><td>Peak Cooling Load</td><td>6,385.8 kBtuh</td><td>6,385.8 kBtuh</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+      <tr><td>Peak Cooling Hour</td><td>JUL 25 10:00</td><td>JUL 25 10:00</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+      <tr><td>Peak Heating Load</td><td>9,041.8 kBtuh</td><td>9,041.8 kBtuh</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+      <tr><td>Peak Electrical Load</td><td>1,042.8 kW</td><td>1,042.8 kW</td><td style="color:#16a085;font-weight:700">✓</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What is <em>not</em> in the SIM file</h2>
+  <div class="box warn">
+    A handful of Excel columns can't come from the .SIM output because they
+    are either user policy or BDL input parameters that DOE-2.2 doesn't echo:
+    <strong>climate zone</strong>, <strong>utility rates</strong>,
+    <strong>carbon emission factors</strong>, and external
+    <strong>shading type descriptors</strong>. These are read from the
+    <code>--config</code> JSON (under <code>rates</code> /
+    <code>climate_zone</code>) and applied during aggregation.
+  </div>
+
+  <h2>Extending the parser</h2>
+  <div class="cols">
+    <div>
+      <h3>Add a new metric</h3>
+      <ol style="padding-left:18px;font-size:9.5pt;">
+        <li>Find which <code>REPORT-</code> contains it.</li>
+        <li>Add a <code>_parse_xxx()</code> method to <code>SIMParser</code> returning a dict.</li>
+        <li>Call it from <code>parse()</code> and merge into the result.</li>
+        <li>Add the column name to <code>excel_writer.COLUMNS</code> with its category color.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Add a new tab</h3>
+      <ol style="padding-left:18px;font-size:9.5pt;">
+        <li>Add the tab key to <code>SHEET_NAMES</code> in <code>excel_writer.py</code>.</li>
+        <li>In <code>run.py</code>, add a CLI flag (e.g. <code>--asbuilt</code>).</li>
+        <li>Tag runs with <code>"tab": "asbuilt"</code> in config.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="box tip">
+    <strong>Tip:</strong> For interactive exploration of the column-to-SIM-report
+    mapping, open <code>sim_excel_mapping.html</code> in any browser. It
+    contains a hoverable, searchable table of all 120+ columns and the exact
+    report each one comes from.
+  </div>
+
+  <div class="footer">
+    <span><strong>epautomate</strong> · DOE-2.2 results automation</span>
+    <span>github.com/khelan-mehta/epautomate</span>
+  </div>
+</div>
+
+</body>
+</html>
